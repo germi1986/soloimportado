@@ -1,67 +1,42 @@
 import type { Product } from './types';
 
-function parseCSV(text: string) {
-  return text
-    .trim()
-    .split('\n')
-    .map((row) =>
-      row
-        .split(',')
-        .map((cell) => cell.replace(/^"|"$/g, '').trim())
-    );
-}
-
-function normalizeHeader(value: string) {
-  return value.trim().toLowerCase();
-}
-
-function num(value: string | undefined) {
+function num(v: string) {
   const n = Number(
-    String(value ?? '')
-      .replace(/\./g, '')
+    String(v ?? '')
+      .replace(/\./g,'')
       .replace(',', '.')
-      .replace(/[^\d.-]/g, '')
+      .replace(/[^\d.-]/g,'')
   );
 
   return Number.isFinite(n) ? n : 0;
 }
 
 export async function getProducts(): Promise<Product[]> {
-  const url =
-    process.env.GOOGLE_SHEET_CSV_URL ||
-    'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1zsgjxmnRQ0I27jwdFvaHbjma8L3bmMb500TITz7heoiLnarXTeBWhbuHXZzq6AGjsY9bbJkUni82/pub?output=csv';
 
-  const res = await fetch(url, {
-    cache: 'no-store'
-  });
+ const url =
+ process.env.GOOGLE_SHEET_CSV_URL ||
+ 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1zsgjxmnRQ0I27jwdFvaHbjma8L3bmMb500TITz7heoiLnarXTeBWhbuHXZzq6AGjsY9bbJkUni82/pub?output=csv';
 
-  const csv = await res.text();
-  const rows = parseCSV(csv);
+ const res = await fetch(url,{cache:'no-store'});
+ const text = await res.text();
 
-  const [headers, ...data] = rows;
-  const normalizedHeaders = headers.map(normalizeHeader);
+ const rows = text
+   .split('\n')
+   .map(r=>r.split(';')); // <- cambio clave
 
-  return data
-    .map((row, i): Product | null => {
-      const record = Object.fromEntries(
-        normalizedHeaders.map((header, index) => [header, row[index] || ''])
-      );
+ const [, ...data] = rows;
 
-      const name = String(record.producto || record.nombre || record.name || '').trim();
-
-      if (!name) return null;
-
-      return {
-        id: String(i + 1),
-        sku: String(record.sku || '').trim() || undefined,
-        name,
-        brand: String(record.marca || '').trim() || undefined,
-        category: String(record.tamaño || record.tamano || '').trim() || undefined,
-        description: undefined,
-        price: num(record['precio usd'] || record['precio ars'] || record.precio),
-        stock: num(record.cantidad || record.stock),
-        imageUrl: String(record.imagen || record.image || '').trim() || undefined
-      };
-    })
-    .filter((product): product is Product => product !== null);
+ return data
+  .filter(r => r[1])
+  .map((r,i)=>({
+      id:String(i+1),
+      brand:r[0],
+      name:r[1],
+      category:r[2],
+      price:num(r[3]),
+      stock:num(r[5]),
+      sku:undefined,
+      description:undefined,
+      imageUrl:undefined
+  }));
 }
