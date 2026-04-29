@@ -15,16 +15,23 @@ export async function getProducts(): Promise<Product[]> {
 
  const url =
  process.env.GOOGLE_SHEET_CSV_URL ||
- 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1zsgjxmnRQ0I27jwdFvaHbjma8L3bmMb500TITz7heoiLnarXTeBWhbuHXZzq6AGjsY9bbJkUni82/pub?output=csv';
+ 'TU_URL_CSV';
 
  const res = await fetch(url,{cache:'no-store'});
  const text = await res.text();
 
  const rows = text
    .split('\n')
-   .map(r=>r.split(';')); // <- cambio clave
+   .map(r=>r.split(','));
 
- const [, ...data] = rows;
+ const headerIndex = rows.findIndex(
+   r => r[0]?.toLowerCase().includes('marca')
+   && r[1]?.toLowerCase().includes('producto')
+ );
+
+ if(headerIndex === -1) return [];
+
+ const data = rows.slice(headerIndex + 1);
 
  return data
   .filter(r => r[1])
