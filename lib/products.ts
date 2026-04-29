@@ -23,7 +23,8 @@ function num(v: string) {
 }
 
 export async function getProducts(): Promise<Product[]> {
-  const url = process.env.GOOGLE_SHEET_CSV_URL;
+  const url = process.env.GOOGLE_SHEET_CSV_URL ||
+  'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1zsgjxmnRQ0I27jwdFvaHbjma8L3bmMb500TITz7heoiLnarXTeBWhbuHXZzq6AGjsY9bbJkUni82/pub?output=csv';
 
   if (!url) return [];
 
