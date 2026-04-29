@@ -38,15 +38,30 @@ function rowsToProducts(rows: string[][]): Product[] {
   const keys = headers.map(normalizeKey);
 
   return dataRows
-    .map((row, index) => {
-      const record = Object.fromEntries(keys.map((key, colIndex) => [key, row[colIndex] ?? '']));
-      const name = String(record.nombre || record.name || record.producto || '').trim();
-      if (!name) return null;
+  .map((row, index) => {
+    const record = Object.fromEntries(
+      keys.map((key, colIndex) => [key, row[colIndex] ?? ''])
+    );
 
-      const id = String(record.id || record.sku || `producto-${index + 1}`).trim();
-      const price = parseNumber(record.precio || record.price || record.precio_mayorista);
-      const stockValue = record.stock || record.disponible || '';
-      const stock = stockValue === '' ? undefined : parseNumber(stockValue);
+    const name = String(
+      record.nombre || record.name || record.producto || ''
+    ).trim();
+
+    if (!name) return null;
+
+    return {
+      id: String(index + 1),
+      sku: String(record.sku || ''),
+      name,
+      brand: String(record.brand || record.marca || ''),
+      category: String(record.category || ''),
+      description: String(record.description || ''),
+      price: Number(record.price || record.precio || 0),
+      stock: Number(record.stock || 0),
+      imageUrl: String(record.image || '')
+    };
+  })
+  .filter(Boolean) as Product[];
 
       return {
         id,
