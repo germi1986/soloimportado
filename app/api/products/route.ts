@@ -1,19 +1,15 @@
 import { NextResponse } from 'next/server';
-import { isAuthenticated } from '@/lib/auth';
-import { getProducts } from '@/lib/products';
-
-export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  if (!isAuthenticated()) {
-    return NextResponse.json({ error: 'No autorizado.' }, { status: 401 });
-  }
+  const url =
+    process.env.GOOGLE_SHEET_CSV_URL ||
+    'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1zsgjxmnRQ0I27jwdFvaHbjma8L3bmMb500TITz7heoiLnarXTeBWhbuHXZzq6AGjsY9bbJkUni82/pub?output=csv';
 
-  try {
-    const products = await getProducts();
-    return NextResponse.json({ products });
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: 'No se pudieron cargar los productos.' }, { status: 500 });
-  }
+  const res = await fetch(url, { cache: 'no-store' });
+  const text = await res.text();
+
+  return NextResponse.json({
+    status: res.status,
+    first500: text.slice(0, 500)
+  });
 }
