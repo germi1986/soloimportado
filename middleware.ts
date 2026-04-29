@@ -1,22 +1,22 @@
-import { NextRequest, NextResponse } from 'next/server';
-
-const AUTH_COOKIE_NAME = process.env.AUTH_COOKIE_NAME || 'soloimportado_auth';
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  const isCatalogRoute = request.nextUrl.pathname.startsWith('/catalog');
-  const isAuthenticated = request.cookies.get(AUTH_COOKIE_NAME)?.value === 'ok';
+  const isCatalog = request.nextUrl.pathname.startsWith('/catalog');
 
-  if (isCatalogRoute && !isAuthenticated) {
-    return NextResponse.redirect(new URL('/', request.url));
+  if (!isCatalog) {
+    return NextResponse.next();
   }
 
-  if (request.nextUrl.pathname === '/' && isAuthenticated) {
-    return NextResponse.redirect(new URL('/catalog', request.url));
+  const token = request.cookies.get('soloimportado_auth')?.value;
+
+  if (!token) {
+    return NextResponse.redirect(new URL('/', request.url));
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/', '/catalog/:path*']
+  matcher: ['/catalog/:path*']
 };
