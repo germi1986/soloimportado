@@ -15,270 +15,182 @@ export default function CatalogClient({ products }: { products: Product[] }) {
   const [quantities, setQuantities] = useState<Record<string, number>>({});
 
   const filteredProducts = useMemo(() => {
-    const normalizedQuery = query.toLowerCase().trim();
-    if (!normalizedQuery) return products;
+    const q = query.toLowerCase().trim();
+    if (!q) return products;
 
-    return products.filter((product) =>
-      [product.name, product.brand, product.category, product.sku]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-        .includes(normalizedQuery)
+    return products.filter((p) =>
+      [p.name, p.brand, p.category].join(' ').toLowerCase().includes(q)
     );
   }, [products, query]);
 
-  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const totalUnits = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+  const totalUnits = cart.reduce((s, i) => s + i.quantity, 0);
   const meetsMinimum = total >= MIN_ORDER;
+
+  // 🔥 DESCUENTOS
+  let discount = 0;
+  if (total >= 2000) discount = 0.12;
+  else if (total >= 1500) discount = 0.10;
+  else if (total >= 1000) discount = 0.07;
+  else if (total >= 500) discount = 0.05;
+
+  const totalWithDiscount = total * (1 - discount);
 
   function addToCart(product: Product) {
     const qty = quantities[product.id] || 1;
 
-    setCart((currentCart) => {
-      const existing = currentCart.find((item) => item.id === product.id);
+    setCart((c) => {
+      const existing = c.find((i) => i.id === product.id);
 
       if (existing) {
-        return currentCart.map((item) =>
-          item.id === product.id
-            ? { ...item, quantity: item.quantity + qty }
-            : item
+        return c.map((i) =>
+          i.id === product.id ? { ...i, quantity: i.quantity + qty } : i
         );
       }
 
-      return [...currentCart, { ...product, quantity: qty }];
+      return [...c, { ...product, quantity: qty }];
     });
   }
 
-  function updateQuantity(productId: string, quantity: number) {
-    if (quantity <= 0) {
-      setCart((c) => c.filter((item) => item.id !== productId));
-      return;
-    }
+  function updateQuantity(id: string, qty: number) {
+    if (qty <= 0) return setCart((c) => c.filter((i) => i.id !== id));
 
     setCart((c) =>
-      c.map((item) =>
-        item.id === productId ? { ...item, quantity } : item
-      )
+      c.map((i) => (i.id === id ? { ...i, quantity: qty } : i))
     );
+  }
+
+  function clearCart() {
+    setCart([]);
   }
 
   function buildWhatsAppText() {
-    const lines = cart.map((item) => {
-      const size = item.category ? ` (${item.category})` : '';
-      return `• ${item.quantity} x ${item.name}${size} - ${formatCurrency(item.price * item.quantity)}`;
-    });
+    const lines = cart.map(
+      (i) =>
+        `• ${i.quantity} x ${i.name} (${i.category}) - ${formatCurrency(
+          i.price * i.quantity
+        )}`
+    );
 
     return encodeURIComponent(
-      `Hola, quiero hacer este pedido mayorista:\n\n${lines.join('\n')}\n\nTotal: ${formatCurrency(total)}`
+      `Hola! Quiero hacer este pedido:\n\n${lines.join(
+        '\n'
+      )}\n\nTotal: ${formatCurrency(totalWithDiscount)}\n\nForma de pago:\nDirección:\nHorario:`
     );
   }
+
+  const progress = Math.min((total / MIN_ORDER) * 100, 100);
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
       <section>
 
         {/* 🔍 BUSCADOR */}
-        <div className="mb-5 rounded-2xl bg-white p-4 shadow-sm">
-          <input
-            className="w-full rounded-xl border border-neutral-300 px-4 py-3 outline-none focus:border-black"
-            placeholder="Buscar por producto, marca o tamaño..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
+        <input
+          className="mb-5 w-full border p-3 rounded"
+          placeholder="Buscar..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
 
-        {/* 🚨 MÍNIMO */}
-        <div className="mb-5 rounded-2xl bg-yellow-100 border border-yellow-300 p-4 text-center">
-          <p className="font-bold text-yellow-800">
-            Compra mínima: USD 300
+        {/* 🔥 BARRA PROGRESO */}
+        <div className="mb-5">
+          <div className="h-3 bg-gray-200 rounded">
+            <div
+              className="h-3 bg-green-500 rounded"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <p className="text-sm mt-1">
+            {formatCurrency(total)} / {formatCurrency(MIN_ORDER)}
           </p>
         </div>
 
-        {/* 📄 CONDICIONES */}
-        <details className="mb-5 rounded-2xl bg-white p-4 shadow-sm">
-          <summary className="cursor-pointer font-black">
-            Condiciones de compra
-          </summary>
-
-          <div className="mt-4 space-y-3 text-sm text-neutral-700">
-            <p><strong>Pagos:</strong> Efectivo (CABA/GBA), Transferencia (+5%), USDT sin recargo.</p>
-            <p><strong>Envíos:</strong> Gratis CABA/GBA. Interior a coordinar.</p>
-            <p><strong>Descuentos:</strong> desde USD 500 (5%) hasta USD 2000 (12%).</p>
-            <p><strong>Entrega:</strong> hasta 3 días hábiles. Stock sujeto a disponibilidad.</p>
-            <p><strong>Garantía:</strong> solo productos en mal estado o abiertos.</p>
-          </div>
-        </details>
-
         {/* 🧱 PRODUCTOS */}
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {filteredProducts.map((product) => (
-            <article key={product.id} className="rounded-2xl bg-white shadow-sm overflow-hidden">
+          {filteredProducts.map((p) => (
+            <div key={p.id} className="border rounded p-3">
+              <img src={p.imageUrl} className="h-40 object-contain w-full" />
 
-              <div className="flex aspect-[4/3] items-center justify-center bg-neutral-100">
-                {product.imageUrl ? (
-                  <img
-                    className="h-full w-full object-contain p-3"
-                    src={product.imageUrl}
-                    alt={product.name}
-                  />
-                ) : (
-                  <span className="text-sm text-neutral-400">Sin imagen</span>
-                )}
+              <p className="text-xs">{p.brand}</p>
+              <h2 className="font-bold">{p.name}</h2>
+              <p className="text-sm">{p.category}</p>
+
+              <p className="font-black">{formatCurrency(p.price)}</p>
+
+              <div className="flex gap-2 mt-2">
+                <button onClick={() =>
+                  setQuantities(q => ({...q,[p.id]:Math.max(1,(q[p.id]||1)-1)}))
+                }>-</button>
+
+                <input
+                  value={quantities[p.id] || 1}
+                  onChange={(e) =>
+                    setQuantities(q => ({...q,[p.id]:Number(e.target.value)}))
+                  }
+                  className="w-10 text-center border"
+                />
+
+                <button onClick={() =>
+                  setQuantities(q => ({...q,[p.id]:(q[p.id]||1)+1}))
+                }>+</button>
+
+                <button onClick={() => addToCart(p)}>
+                  Agregar
+                </button>
               </div>
-
-              <div className="p-4 space-y-3">
-                <div>
-                  <p className="text-xs text-neutral-500 uppercase">
-                    {product.brand}
-                  </p>
-
-                  <h2 className="font-bold text-lg">{product.name}</h2>
-
-                  {product.category && (
-                    <p className="text-sm text-neutral-600">
-                      {product.category}
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="text-xl font-black">
-                      {formatCurrency(product.price)}
-                    </p>
-                    <p className="text-xs text-neutral-500">
-                      Stock: {product.stock}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() =>
-                        setQuantities((q) => ({
-                          ...q,
-                          [product.id]: Math.max(1, (q[product.id] || 1) - 1)
-                        }))
-                      }
-                      className="h-8 w-8 border rounded"
-                    >
-                      -
-                    </button>
-
-                    <input
-                      type="number"
-                      className="w-10 text-center border rounded"
-                      value={quantities[product.id] || 1}
-                      onChange={(e) =>
-                        setQuantities((q) => ({
-                          ...q,
-                          [product.id]: Number(e.target.value)
-                        }))
-                      }
-                    />
-
-                    <button
-                      onClick={() =>
-                        setQuantities((q) => ({
-                          ...q,
-                          [product.id]: (q[product.id] || 1) + 1
-                        }))
-                      }
-                      className="h-8 w-8 border rounded"
-                    >
-                      +
-                    </button>
-
-                    <button
-                      onClick={() => addToCart(product)}
-                      className="ml-2 bg-black text-white px-3 py-2 rounded"
-                    >
-                      Agregar
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </article>
+            </div>
           ))}
         </div>
       </section>
 
       {/* 🛒 CARRITO */}
-      <aside className="bg-white p-5 rounded-2xl shadow-sm">
-        <h2 className="font-black text-xl mb-2">Pedido</h2>
-        <p className="text-sm mb-4">{totalUnits} unidades</p>
+      <aside className="border p-4 rounded">
+        <h2>Pedido ({totalUnits})</h2>
 
-        {!meetsMinimum && (
-          <p className="mb-3 text-sm text-red-600 text-center">
-            Te faltan USD {(MIN_ORDER - total).toFixed(2)} para completar el mínimo
-          </p>
-        )}
+        <button onClick={clearCart} className="text-red-500 text-sm">
+          Vaciar carrito
+        </button>
 
-        {cart.map((item) => (
-          <div key={item.id} className="mb-3 border p-3 rounded">
-            
-            <div className="flex justify-between">
-              <div>
-                <p className="font-semibold">
-                  {item.name} ({item.category})
-                </p>
-                <p className="text-sm text-neutral-500">
-                  {formatCurrency(item.price * item.quantity)}
-                </p>
-              </div>
+        {cart.map((i) => (
+          <div key={i.id} className="border p-2 mt-2">
+            <p>{i.name}</p>
+            <p>{formatCurrency(i.price * i.quantity)}</p>
 
-              <button
-                onClick={() => updateQuantity(item.id, 0)}
-                className="text-red-500"
-              >
-                ✕
-              </button>
+            <div className="flex gap-2">
+              <button onClick={() => updateQuantity(i.id, i.quantity - 1)}>-</button>
+              <input value={i.quantity} onChange={(e)=>updateQuantity(i.id,Number(e.target.value))}/>
+              <button onClick={() => updateQuantity(i.id, i.quantity + 1)}>+</button>
             </div>
-
-            <div className="mt-2 flex items-center gap-2">
-              <button
-                onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                className="h-8 w-8 border rounded"
-              >
-                -
-              </button>
-
-              <input
-                className="h-8 w-12 border rounded text-center"
-                type="number"
-                value={item.quantity}
-                onChange={(e) => updateQuantity(item.id, Number(e.target.value))}
-              />
-
-              <button
-                onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                className="h-8 w-8 border rounded"
-              >
-                +
-              </button>
-            </div>
-
           </div>
         ))}
 
-        <div className="border-t pt-4">
-          <p className="font-black text-lg">
-            Total: {formatCurrency(total)}
-          </p>
+        <p className="mt-3">Total: {formatCurrency(total)}</p>
 
-          <a
-            className={`block mt-3 text-white text-center py-2 rounded ${
-              meetsMinimum ? 'bg-green-600' : 'bg-gray-400 cursor-not-allowed'
-            }`}
-            href={meetsMinimum ? `https://wa.me/5491170612311?text=${buildWhatsAppText()}` : undefined}
-            onClick={(e) => {
-              if (!meetsMinimum) e.preventDefault();
-            }}
-            target="_blank"
-          >
-            {meetsMinimum ? 'Enviar pedido por WhatsApp' : 'Mínimo USD 300'}
-          </a>
-        </div>
+        {discount > 0 && (
+          <p className="text-green-600">
+            Descuento aplicado: {(discount * 100).toFixed(0)}%
+          </p>
+        )}
+
+        <p className="font-bold">
+          Final: {formatCurrency(totalWithDiscount)}
+        </p>
+
+        <a
+          className={`block mt-3 text-center py-2 ${
+            meetsMinimum ? 'bg-green-600 text-white' : 'bg-gray-400'
+          }`}
+          href={meetsMinimum ? `https://wa.me/54911XXXXXXXX?text=${buildWhatsAppText()}` : undefined}
+        >
+          {meetsMinimum ? 'Enviar pedido por WhatsApp' : 'Mínimo USD 300'}
+        </a>
       </aside>
+
+      {/* 📱 STICKY MOBILE */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white p-3 shadow lg:hidden">
+        <p>{totalUnits} unidades - {formatCurrency(total)}</p>
+      </div>
     </div>
   );
 }
