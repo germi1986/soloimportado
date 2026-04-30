@@ -93,7 +93,7 @@ export async function getProducts(): Promise<Product[]> {
       brand: getCell(r, headers, ['Marca']),
       name: getCell(r, headers, ['Producto']),
       category: getCell(r, headers, ['Tamaño', 'Categoria', 'Categoría']),
-      price: num(getCell(r, headers, ['Precio', 'ARS Base', 'Precio ARS'])),
+      price: num(r[3]),
       stock: num(getCell(r, headers, ['Cantidad', 'Stock'])),
       sku: undefined,
       description: undefined,
