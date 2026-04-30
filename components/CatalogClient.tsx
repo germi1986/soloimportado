@@ -717,7 +717,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
 
         <aside
           id="pedido"
-          className="flex h-fit rounded-2xl bg-white p-5 shadow-sm lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:flex-col"
+          className="flex h-fit flex-col rounded-2xl bg-white p-5 shadow-sm lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)]"
         >
           <div className="shrink-0">
             <h2 className="mb-2 text-xl font-black">Pedido</h2>
