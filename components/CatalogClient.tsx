@@ -73,6 +73,80 @@ export default function CatalogClient({ products }: { products: Product[] }) {
             onChange={(event) => setQuery(event.target.value)}
           />
         </div>
+        <details className="mb-5 rounded-2xl bg-white p-4 shadow-sm">
+  <summary className="cursor-pointer select-none text-base font-black">
+    Condiciones de compra
+  </summary>
+
+  <div className="mt-4 space-y-4 text-sm text-neutral-700">
+    <div>
+      <h3 className="font-black text-black">Pagos</h3>
+      <ul className="mt-1 list-disc space-y-1 pl-5">
+        <li>
+          <strong>Efectivo contra entrega:</strong> disponible solo para CABA y GBA.
+          Se acepta en pesos o dólares físicos.
+        </li>
+        <li>
+          <strong>Transferencia en pesos:</strong> tiene un recargo del 5%.
+        </li>
+        <li>
+          <strong>USDT:</strong> recomendado, sin recargo.
+        </li>
+      </ul>
+    </div>
+
+    <div>
+      <h3 className="font-black text-black">Envíos</h3>
+      <ul className="mt-1 list-disc space-y-1 pl-5">
+        <li>
+          <strong>CABA y GBA:</strong> envío sin cargo.
+        </li>
+        <li>
+          <strong>Interior del país:</strong> a coordinar por Correo Argentino,
+          Andreani o transporte a convenir.
+        </li>
+      </ul>
+    </div>
+
+    <div>
+      <h3 className="font-black text-black">Descuentos por volumen</h3>
+      <ul className="mt-1 list-disc space-y-1 pl-5">
+        <li>Desde USD 500: 5% de descuento.</li>
+        <li>Desde USD 1000: 7% de descuento.</li>
+        <li>Desde USD 1500: 10% de descuento.</li>
+        <li>Desde USD 2000: 12% de descuento.</li>
+      </ul>
+    </div>
+
+    <div>
+      <h3 className="font-black text-black">Tiempos de entrega</h3>
+      <p className="mt-1">
+        Los pedidos pueden demorar hasta <strong>3 días hábiles</strong>.
+        Algunos productos cuentan con entrega inmediata, pero debido a la amplitud
+        del catálogo, el stock puede variar.
+      </p>
+      <p className="mt-2">
+        El stock se confirma al momento de armar el pedido.
+      </p>
+      <p className="mt-2">
+        En caso de demoras mayores al plazo informado, el cliente puede solicitar
+        la cancelación y la devolución total del dinero.
+      </p>
+    </div>
+
+    <div>
+      <h3 className="font-black text-black">Devoluciones y garantía</h3>
+      <p className="mt-1">
+        Se realiza devolución del dinero únicamente por productos entregados en mal
+        estado o con la caja abierta.
+      </p>
+    </div>
+
+    <p className="rounded-xl bg-neutral-100 p-3 text-xs font-semibold text-neutral-600">
+      Al confirmar el pedido, el cliente acepta estas condiciones.
+    </p>
+  </div>
+</details>
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {filteredProducts.map((product) => (
