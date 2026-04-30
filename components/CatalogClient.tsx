@@ -269,13 +269,13 @@ export default function CatalogClient({ products }: { products: Product[] }) {
             className={`block mt-3 text-white text-center py-2 rounded ${
               meetsMinimum ? 'bg-green-600' : 'bg-gray-400 cursor-not-allowed'
             }`}
-            href={meetsMinimum ? `https://wa.me/?text=${buildWhatsAppText()}` : undefined}
+            href={meetsMinimum ? `https://wa.me/5491170612311?text=${buildWhatsAppText()}` : undefined}
             onClick={(e) => {
               if (!meetsMinimum) e.preventDefault();
             }}
             target="_blank"
           >
-            {meetsMinimum ? 'Enviar pedido' : 'Mínimo USD 300'}
+            {meetsMinimum ? 'Enviar pedido por WhatsApp' : 'Mínimo USD 300'}
           </a>
         </div>
       </aside>
