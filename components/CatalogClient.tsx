@@ -1,11 +1,13 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { CartItem, Product } from '@/lib/types';
 
 const MIN_ORDER = 300;
 const INITIAL_VISIBLE_PRODUCTS = 24;
 const PRODUCTS_STEP = 24;
+const DOLAR_CSV_URL =
+  'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1zsgjxmnRQ0I27jwdFvaHbjma8L3bmMb500TITz7heoiLnarXTeBWhbuHXZzq6AGjsY9bbJkUni82/pub?gid=1050214761&single=true&output=csv';
 
 const DISCOUNT_TIERS = [
   { amount: 500, percent: 5 },
@@ -13,8 +15,61 @@ const DISCOUNT_TIERS = [
   { amount: 2000, percent: 12 }
 ];
 
-function formatCurrency(value: number) {
+function formatCurrency(value: number, currency: 'USD' | 'ARS' = 'USD', dolarValue = 0) {
+  if (currency === 'ARS') {
+    const arsValue = dolarValue > 0 ? value * dolarValue : value;
+
+    return new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      maximumFractionDigits: 0
+    }).format(arsValue);
+  }
+
   return `USD ${value.toFixed(2)}`;
+}
+
+function parseCsvLine(line: string) {
+  const result: string[] = [];
+  let current = '';
+  let insideQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    const nextChar = line[i + 1];
+
+    if (char === '"' && insideQuotes && nextChar === '"') {
+      current += '"';
+      i++;
+      continue;
+    }
+
+    if (char === '"') {
+      insideQuotes = !insideQuotes;
+      continue;
+    }
+
+    if (char === ',' && !insideQuotes) {
+      result.push(current.trim());
+      current = '';
+      continue;
+    }
+
+    current += char;
+  }
+
+  result.push(current.trim());
+  return result;
+}
+
+function parseNumber(value: string) {
+  const cleaned = String(value ?? '')
+    .replace(/[^\d.,-]/g, '')
+    .replace(',', '.');
+
+  const number = Number(cleaned);
+
+  return Number.isFinite(number) ? number : 0;
 }
 
 export default function CatalogClient({ products }: { products: Product[] }) {
@@ -27,6 +82,8 @@ export default function CatalogClient({ products }: { products: Product[] }) {
   const [selectedBrand, setSelectedBrand] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [sortOrder, setSortOrder] = useState<'none' | 'asc' | 'desc'>('none');
+  const [selectedCurrency, setSelectedCurrency] = useState<'USD' | 'ARS'>('USD');
+  const [dolarValue, setDolarValue] = useState(0);
 
   const brands = useMemo(() => {
     return Array.from(new Set(products.map((p) => p.brand).filter(Boolean))).sort();
@@ -35,6 +92,34 @@ export default function CatalogClient({ products }: { products: Product[] }) {
   const categories = useMemo(() => {
     return Array.from(new Set(products.map((p) => p.category).filter(Boolean))).sort();
   }, [products]);
+
+  useEffect(() => {
+    async function cargarDolar() {
+      try {
+        const response = await fetch(DOLAR_CSV_URL, { cache: 'no-store' });
+        const text = await response.text();
+        const rows = text
+          .split(/\r?\n/)
+          .filter(Boolean)
+          .map(parseCsvLine);
+
+        const valorS2 = rows[1]?.[18] || '';
+        const dolar = parseNumber(valorS2);
+
+        if (dolar > 0) {
+          setDolarValue(dolar);
+        }
+      } catch (error) {
+        console.error('No se pudo cargar el valor del dólar', error);
+      }
+    }
+
+    cargarDolar();
+  }, []);
+
+  function money(value: number) {
+    return formatCurrency(value, selectedCurrency, dolarValue);
+  }
 
   const filteredProducts = useMemo(() => {
     const normalizedQuery = query.toLowerCase().trim();
@@ -180,21 +265,21 @@ export default function CatalogClient({ products }: { products: Product[] }) {
   function buildWhatsAppText() {
     const lines = cart.map((item) => {
       const size = item.category ? ` (${item.category})` : '';
-      return `• ${item.quantity} x ${item.name}${size} - ${formatCurrency(
+      return `• ${item.quantity} x ${item.name}${size} - ${money(
         item.price * item.quantity
       )}`;
     });
 
     const discountLine = currentDiscount
-      ? `\nDescuento estimado: ${currentDiscount.percent}% (-${formatCurrency(
+      ? `\nDescuento estimado: ${currentDiscount.percent}% (-${money(
           discountAmount
-        )})\nTotal final estimado: ${formatCurrency(finalTotal)}`
+        )})\nTotal final estimado: ${money(finalTotal)}`
       : '';
 
     return encodeURIComponent(
       `Hola, quiero hacer este pedido mayorista:\n\n${lines.join(
         '\n'
-      )}\n\nSubtotal: ${formatCurrency(total)}${discountLine}`
+      )}\n\nSubtotal: ${money(total)}${discountLine}`
     );
   }
 
@@ -290,7 +375,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
                 meetsMinimum ? 'text-green-800' : 'text-yellow-800'
               }`}
             >
-              Compra mínima: USD 300
+              Compra mínima: {money(MIN_ORDER)}
             </p>
 
             <div
@@ -313,7 +398,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
             >
               {meetsMinimum
                 ? 'Ya alcanzaste el mínimo para enviar el pedido.'
-                : `Te faltan ${formatCurrency(MIN_ORDER - total)} para completar el mínimo.`}
+                : `Te faltan ${money(MIN_ORDER - total)} para completar el mínimo.`}
             </p>
           </div>
 
@@ -330,7 +415,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
                       : 'border-neutral-200 bg-neutral-50 text-neutral-600'
                   }`}
                 >
-                  <span>Desde {formatCurrency(tier.amount)}</span>
+                  <span>Desde {money(tier.amount)}</span>
                   <strong>{tier.percent}% OFF</strong>
                 </div>
               ))}
@@ -338,7 +423,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
 
             <p className="mt-3 text-sm font-semibold">
               {nextDiscount
-                ? `Te faltan ${formatCurrency(nextDiscount.amount - total)} para activar el ${nextDiscount.percent}% OFF.`
+                ? `Te faltan ${money(nextDiscount.amount - total)} para activar el ${nextDiscount.percent}% OFF.`
                 : 'Ya alcanzaste el mayor descuento disponible.'}
             </p>
           </div>
@@ -351,7 +436,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
             <div className="mt-4 space-y-3 text-sm text-neutral-700">
               <p><strong>Pagos:</strong> Efectivo (CABA/GBA), Transferencia (+5%), USDT sin recargo.</p>
               <p><strong>Envíos:</strong> Gratis CABA/GBA. Interior a coordinar.</p>
-              <p><strong>Descuentos:</strong> desde USD 500 (5%) hasta USD 2000 (12%).</p>
+              <p><strong>Descuentos:</strong> desde {money(500)} (5%) hasta {money(2000)} (12%).</p>
               <p><strong>Entrega:</strong> hasta 3 días hábiles. Stock sujeto a disponibilidad.</p>
               <p><strong>Garantía:</strong> solo productos en mal estado o abiertos.</p>
             </div>
@@ -385,6 +470,40 @@ export default function CatalogClient({ products }: { products: Product[] }) {
                 Lista mayorista
               </button>
             </div>
+
+            <p className="mb-2 mt-4 text-sm font-black text-neutral-700">
+              Moneda
+            </p>
+
+            <div className="grid grid-cols-2 rounded-xl border border-neutral-300 p-1">
+              <button
+                onClick={() => setSelectedCurrency('USD')}
+                className={`rounded-lg px-4 py-2 text-sm font-black ${
+                  selectedCurrency === 'USD'
+                    ? 'bg-black text-white'
+                    : 'bg-white text-black'
+                }`}
+              >
+                USD
+              </button>
+
+              <button
+                onClick={() => setSelectedCurrency('ARS')}
+                className={`rounded-lg px-4 py-2 text-sm font-black ${
+                  selectedCurrency === 'ARS'
+                    ? 'bg-black text-white'
+                    : 'bg-white text-black'
+                }`}
+              >
+                ARS
+              </button>
+            </div>
+
+            {selectedCurrency === 'ARS' && (
+              <p className="mt-2 text-xs font-semibold text-neutral-500">
+                Cotización usada: {dolarValue > 0 ? `$${dolarValue.toLocaleString('es-AR')}` : 'cargando...'}
+              </p>
+            )}
           </div>
 
           <p className="mb-3 text-sm text-neutral-600">
@@ -441,7 +560,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
 
                       <div>
                         <p className="text-xl font-black">
-                          {formatCurrency(product.price)}
+                          {money(product.price)}
                         </p>
                         <p className="text-xs text-neutral-500">
                           Stock: {product.stock}
@@ -542,7 +661,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
                           <td className="p-3 font-bold">{product.name}</td>
                           <td className="p-3">{product.brand}</td>
                           <td className="p-3">{product.category}</td>
-                          <td className="p-3 font-black">{formatCurrency(product.price)}</td>
+                          <td className="p-3 font-black">{money(product.price)}</td>
                           <td className="p-3">{product.stock}</td>
 
                           <td className="p-3">
@@ -650,7 +769,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
                           <p className="text-sm text-neutral-600">{product.category}</p>
 
                           <div className="mt-1 flex justify-between gap-3">
-                            <p className="font-black">{formatCurrency(product.price)}</p>
+                            <p className="font-black">{money(product.price)}</p>
                             <p className="text-xs text-neutral-500">Stock: {product.stock}</p>
                           </div>
                         </div>
@@ -725,7 +844,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
 
             {!meetsMinimum && (
               <p className="mb-3 text-center text-sm font-semibold text-red-600">
-                Te faltan {formatCurrency(MIN_ORDER - total)} para completar el mínimo
+                Te faltan {money(MIN_ORDER - total)} para completar el mínimo
               </p>
             )}
           </div>
@@ -746,7 +865,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
                       {item.category ? ` (${item.category})` : ''}
                     </p>
                     <p className="text-sm text-neutral-500">
-                      {formatCurrency(item.price * item.quantity)}
+                      {money(item.price * item.quantity)}
                     </p>
                   </div>
 
@@ -788,7 +907,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
 
           <div className="mt-4 shrink-0 space-y-2 border-t bg-white pt-4">
             <p className="text-lg font-black">
-              Subtotal: {formatCurrency(total)}
+              Subtotal: {money(total)}
             </p>
 
             {currentDiscount && (
@@ -797,17 +916,17 @@ export default function CatalogClient({ products }: { products: Product[] }) {
                   Descuento aplicado: {currentDiscount.percent}% OFF
                 </p>
                 <p className="text-sm text-green-700">
-                  Ahorrás {formatCurrency(discountAmount)}
+                  Ahorrás {money(discountAmount)}
                 </p>
                 <p className="text-xl font-black">
-                  Total final: {formatCurrency(finalTotal)}
+                  Total final: {money(finalTotal)}
                 </p>
               </>
             )}
 
             {!currentDiscount && nextDiscount && total > 0 && (
               <p className="text-sm font-semibold text-neutral-700">
-                Agregá {formatCurrency(nextDiscount.amount - total)} más y activás {nextDiscount.percent}% OFF.
+                Agregá {money(nextDiscount.amount - total)} más y activás {nextDiscount.percent}% OFF.
               </p>
             )}
 
@@ -822,7 +941,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
               target="_blank"
               rel="noopener noreferrer"
             >
-              {meetsMinimum ? 'Confirmar pedido por WhatsApp' : 'Mínimo USD 300'}
+              {meetsMinimum ? 'Confirmar pedido por WhatsApp' : `Mínimo ${money(MIN_ORDER)}`}
             </a>
 
             {meetsMinimum && (
@@ -839,7 +958,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
           <div>
             <p className="text-xs text-neutral-500">Pedido</p>
             <p className="font-black">
-              {formatCurrency(currentDiscount ? finalTotal : total)}
+              {money(currentDiscount ? finalTotal : total)}
             </p>
           </div>
 
