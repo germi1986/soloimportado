@@ -11,16 +11,55 @@ function num(v: string) {
   return Number.isFinite(n) ? n : 0;
 }
 
+function clean(value: string) {
+  return String(value ?? '')
+    .replace(/^"|"$/g, '')
+    .trim();
+}
+
 function getCell(row: string[], headers: string[], possibleNames: string[]) {
   for (const name of possibleNames) {
     const index = headers.findIndex(
-      (h) => h.trim().toLowerCase() === name.trim().toLowerCase()
+      (h) => clean(h).toLowerCase() === name.trim().toLowerCase()
     );
 
-    if (index !== -1) return row[index] ?? '';
+    if (index !== -1) return clean(row[index] ?? '');
   }
 
   return '';
+}
+
+function parseCsvLine(line: string) {
+  const result: string[] = [];
+  let current = '';
+  let insideQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    const nextChar = line[i + 1];
+
+    if (char === '"' && insideQuotes && nextChar === '"') {
+      current += '"';
+      i++;
+      continue;
+    }
+
+    if (char === '"') {
+      insideQuotes = !insideQuotes;
+      continue;
+    }
+
+    if (char === ',' && !insideQuotes) {
+      result.push(clean(current));
+      current = '';
+      continue;
+    }
+
+    current += char;
+  }
+
+  result.push(clean(current));
+  return result;
 }
 
 export async function getProducts(): Promise<Product[]> {
@@ -32,13 +71,14 @@ export async function getProducts(): Promise<Product[]> {
   const text = await res.text();
 
   const rows = text
-    .split('\n')
-    .map((r) => r.split(',').map((c) => c.trim()));
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .map(parseCsvLine);
 
   const headerIndex = rows.findIndex(
     (r) =>
-      r[0]?.toLowerCase().includes('marca') &&
-      r[1]?.toLowerCase().includes('producto')
+      clean(r[0]).toLowerCase().includes('marca') &&
+      clean(r[1]).toLowerCase().includes('producto')
   );
 
   if (headerIndex === -1) return [];
@@ -47,7 +87,7 @@ export async function getProducts(): Promise<Product[]> {
   const data = rows.slice(headerIndex + 1);
 
   return data
-    .filter((r) => r[1])
+    .filter((r) => getCell(r, headers, ['Producto']))
     .map((r, i) => ({
       id: String(i + 1),
       brand: getCell(r, headers, ['Marca']),
