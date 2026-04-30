@@ -1,12 +1,13 @@
 import type { Product } from './types';
 
 function num(v: string) {
-  const n = Number(
-    String(v ?? '')
-      .replace(/\./g, '')
-      .replace(',', '.')
-      .replace(/[^\d.-]/g, '')
-  );
+  const raw = String(v ?? '').trim();
+
+  const cleaned = raw
+    .replace(/[^\d.,-]/g, '')
+    .replace(',', '.');
+
+  const n = Number(cleaned);
 
   return Number.isFinite(n) ? n : 0;
 }
