@@ -73,7 +73,14 @@ export default function CatalogClient({ products }: { products: Product[] }) {
               <div className="flex aspect-[4/3] items-center justify-center bg-neutral-100">
                 {product.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img className="h-full w-full object-contain p-3" src={product.imageUrl} alt={product.name} />
+                  <img
+  className="h-full w-full object-contain p-3"
+  src={product.imageUrl?.replace(/^"|"$/g, '').trim()}
+  alt={product.name}
+  onError={(event) => {
+    event.currentTarget.style.display = 'none';
+  }}
+/>
                 ) : (
                   <span className="text-sm text-neutral-400">Sin imagen</span>
                 )}
