@@ -3,6 +3,8 @@
 import { useMemo, useState } from 'react';
 import type { CartItem, Product } from '@/lib/types';
 
+const MIN_ORDER = 300;
+
 function formatCurrency(value: number) {
   return `USD ${value.toFixed(2)}`;
 }
@@ -27,6 +29,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
 
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const totalUnits = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const meetsMinimum = total >= MIN_ORDER;
 
   function addToCart(product: Product) {
     const qty = quantities[product.id] || 1;
@@ -84,6 +87,13 @@ export default function CatalogClient({ products }: { products: Product[] }) {
           />
         </div>
 
+        {/* 🚨 MÍNIMO DE COMPRA */}
+        <div className="mb-5 rounded-2xl bg-yellow-100 border border-yellow-300 p-4 text-center">
+          <p className="font-bold text-yellow-800">
+            Compra mínima: USD 300
+          </p>
+        </div>
+
         {/* 📄 CONDICIONES */}
         <details className="mb-5 rounded-2xl bg-white p-4 shadow-sm">
           <summary className="cursor-pointer font-black">
@@ -104,7 +114,6 @@ export default function CatalogClient({ products }: { products: Product[] }) {
           {filteredProducts.map((product) => (
             <article key={product.id} className="rounded-2xl bg-white shadow-sm overflow-hidden">
 
-              {/* IMAGEN */}
               <div className="flex aspect-[4/3] items-center justify-center bg-neutral-100">
                 {product.imageUrl ? (
                   <img
@@ -117,7 +126,6 @@ export default function CatalogClient({ products }: { products: Product[] }) {
                 )}
               </div>
 
-              {/* INFO */}
               <div className="p-4 space-y-3">
                 <div>
                   <p className="text-xs text-neutral-500 uppercase">
@@ -143,7 +151,6 @@ export default function CatalogClient({ products }: { products: Product[] }) {
                     </p>
                   </div>
 
-                  {/* 🔢 CANTIDAD */}
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() =>
@@ -200,6 +207,12 @@ export default function CatalogClient({ products }: { products: Product[] }) {
         <h2 className="font-black text-xl mb-2">Pedido</h2>
         <p className="text-sm mb-4">{totalUnits} unidades</p>
 
+        {!meetsMinimum && (
+          <p className="mb-3 text-sm text-red-600 text-center">
+            Te faltan USD {(MIN_ORDER - total).toFixed(2)} para completar el mínimo
+          </p>
+        )}
+
         {cart.map((item) => (
           <div key={item.id} className="mb-3 border p-3 rounded">
             <p>{item.name} ({item.category})</p>
@@ -213,11 +226,16 @@ export default function CatalogClient({ products }: { products: Product[] }) {
           </p>
 
           <a
-            className="block mt-3 bg-green-600 text-white text-center py-2 rounded"
-            href={`https://wa.me/?text=${buildWhatsAppText()}`}
+            className={`block mt-3 text-white text-center py-2 rounded ${
+              meetsMinimum ? 'bg-green-600' : 'bg-gray-400 cursor-not-allowed'
+            }`}
+            href={meetsMinimum ? `https://wa.me/?text=${buildWhatsAppText()}` : undefined}
+            onClick={(e) => {
+              if (!meetsMinimum) e.preventDefault();
+            }}
             target="_blank"
           >
-            Enviar pedido
+            {meetsMinimum ? 'Enviar pedido' : 'Mínimo USD 300'}
           </a>
         </div>
       </aside>
