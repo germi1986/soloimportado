@@ -87,7 +87,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
           />
         </div>
 
-        {/* 🚨 MÍNIMO DE COMPRA */}
+        {/* 🚨 MÍNIMO */}
         <div className="mb-5 rounded-2xl bg-yellow-100 border border-yellow-300 p-4 text-center">
           <p className="font-bold text-yellow-800">
             Compra mínima: USD 300
@@ -215,8 +215,48 @@ export default function CatalogClient({ products }: { products: Product[] }) {
 
         {cart.map((item) => (
           <div key={item.id} className="mb-3 border p-3 rounded">
-            <p>{item.name} ({item.category})</p>
-            <p>{formatCurrency(item.price * item.quantity)}</p>
+            
+            <div className="flex justify-between">
+              <div>
+                <p className="font-semibold">
+                  {item.name} ({item.category})
+                </p>
+                <p className="text-sm text-neutral-500">
+                  {formatCurrency(item.price * item.quantity)}
+                </p>
+              </div>
+
+              <button
+                onClick={() => updateQuantity(item.id, 0)}
+                className="text-red-500"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mt-2 flex items-center gap-2">
+              <button
+                onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                className="h-8 w-8 border rounded"
+              >
+                -
+              </button>
+
+              <input
+                className="h-8 w-12 border rounded text-center"
+                type="number"
+                value={item.quantity}
+                onChange={(e) => updateQuantity(item.id, Number(e.target.value))}
+              />
+
+              <button
+                onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                className="h-8 w-8 border rounded"
+              >
+                +
+              </button>
+            </div>
+
           </div>
         ))}
 
