@@ -95,7 +95,7 @@ export async function getProducts(): Promise<Product[]> {
       name: getCell(r, headers, ['Producto']),
       category: getCell(r, headers, ['Tamaño', 'Categoria', 'Categoría']),
       price: num(r[3]),
-      stock: num(getCell(r, headers, ['Cantidad', 'Stock'])),
+      stock: Math.floor(Math.random() * 20) + 5,
       sku: undefined,
       description: undefined,
       imageUrl: getCell(r, headers, ['Imagen', 'URL Imagen', 'URLImagen'])
