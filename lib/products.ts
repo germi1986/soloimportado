@@ -3,18 +3,6 @@ import type { Product } from './types';
 const GOOGLE_SHEET_CSV_URL =
   'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1zsgjxmnRQ0I27jwdFvaHbjma8L3bmMb500TITz7heoiLnarXTeBWhbuHXZzq6AGjsY9bbJkUni82/pub?gid=1050214761&single=true&output=csv';
 
-function num(v: string) {
-  const raw = String(v ?? '').trim();
-
-  const cleaned = raw
-    .replace(/[^\d.,-]/g, '')
-    .replace(',', '.');
-
-  const n = Number(cleaned);
-
-  return Number.isFinite(n) ? n : 0;
-}
-
 function clean(value: string) {
   return String(value ?? '')
     .replace(/^\uFEFF/, '')
@@ -29,64 +17,37 @@ function normalizeHeader(value: string) {
     .replace(/[\u0300-\u036f]/g, '');
 }
 
-function normalizeGender(value: string): Product['gender'] {
-  const raw = clean(value).toLowerCase();
+function num(value: string) {
+  const raw = clean(value);
 
-  const gender = raw
+  const cleaned = raw
+    .replace(/[^\d.,-]/g, '')
+    .replace(',', '.');
+
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function normalizeGender(value: string): Product['gender'] {
+  const gender = clean(value)
+    .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .trim();
 
-  if (
-    gender === 'hombre' ||
-    gender === 'masculino' ||
-    gender === 'male' ||
-    gender === 'men' ||
-    gender === 'man'
-  ) {
+  if (['hombre', 'masculino', 'male', 'men', 'man'].includes(gender)) {
     return 'hombre';
   }
 
-  if (
-    gender === 'mujer' ||
-    gender === 'femenino' ||
-    gender === 'female' ||
-    gender === 'women' ||
-    gender === 'woman'
-  ) {
+  if (['mujer', 'femenino', 'female', 'women', 'woman'].includes(gender)) {
     return 'mujer';
   }
 
-  if (
-    gender === 'unisex' ||
-    gender === 'uni sex' ||
-    gender === 'ambos'
-  ) {
+  if (['unisex', 'uni sex', 'ambos'].includes(gender)) {
     return 'unisex';
   }
 
-  if (
-    gender === 'desconocido' ||
-    gender === 'unknown' ||
-    gender === 'sin dato' ||
-    gender === 's/d'
-  ) {
-    return 'desconocido';
-  }
-
   return 'desconocido';
-}
-
-function getCell(row: string[], headers: string[], possibleNames: string[]) {
-  const normalizedNames = possibleNames.map(normalizeHeader);
-
-  const index = headers.findIndex((h) =>
-    normalizedNames.includes(normalizeHeader(h))
-  );
-
-  if (index !== -1) return clean(row[index] ?? '');
-
-  return '';
 }
 
 function parseCsv(text: string) {
@@ -140,9 +101,21 @@ function parseCsv(text: string) {
   return rows;
 }
 
+function getCell(row: string[], headers: string[], possibleNames: string[]) {
+  const normalizedNames = possibleNames.map(normalizeHeader);
+
+  const index = headers.findIndex((header) =>
+    normalizedNames.includes(normalizeHeader(header))
+  );
+
+  if (index !== -1) return clean(row[index] ?? '');
+
+  return '';
+}
+
 function detectHeaderIndex(rows: string[][]) {
-  return rows.findIndex((r) => {
-    const normalized = r.map(normalizeHeader);
+  return rows.findIndex((row) => {
+    const normalized = row.map(normalizeHeader);
 
     return (
       normalized.includes('marca') &&
@@ -151,30 +124,31 @@ function detectHeaderIndex(rows: string[][]) {
   });
 }
 
-function getGenderFromRow(row: string[], headers: string[]) {
+function getGender(row: string[], headers: string[]) {
   const byHeader = getCell(row, headers, [
     'Genero',
     'Género',
     'Gender',
     'Sexo',
-    'gender',
-    'genero comercial',
-    'género comercial'
+    'Genero comercial',
+    'Género comercial'
   ]);
 
   if (byHeader) return normalizeGender(byHeader);
 
-  // Fallback real: columna P de Google Sheets = índice 15
+  // Columna P = índice 15
   return normalizeGender(row[15] ?? '');
 }
 
 export async function getProducts(): Promise<Product[]> {
-  const url = process.env.GOOGLE_SHEET_CSV_URL || GOOGLE_SHEET_CSV_URL;
+  const res = await fetch(GOOGLE_SHEET_CSV_URL, {
+    cache: 'no-store',
+    next: { revalidate: 0 }
+  });
 
-  const res = await fetch(url, { cache: 'no-store' });
   const text = await res.text();
+  const rows = parseCsv(text).filter((row) => row.some(Boolean));
 
-  const rows = parseCsv(text).filter((r) => r.some(Boolean));
   const headerIndex = detectHeaderIndex(rows);
 
   if (headerIndex === -1) return [];
@@ -183,24 +157,43 @@ export async function getProducts(): Promise<Product[]> {
   const data = rows.slice(headerIndex + 1);
 
   return data
-    .filter((r) => getCell(r, headers, ['Producto', 'Nombre', 'Name']))
-    .map((r, i) => {
-      const gender = getGenderFromRow(r, headers);
+    .filter((row) =>
+      getCell(row, headers, ['Producto', 'Nombre', 'Name'])
+    )
+    .map((row, index) => {
+      const brand = getCell(row, headers, ['Marca', 'Brand']);
+      const name = getCell(row, headers, ['Producto', 'Nombre', 'Name']);
+      const category = getCell(row, headers, [
+        'Tamaño',
+        'Tamano',
+        'Categoría',
+        'Categoria',
+        'Category'
+      ]);
+
+      const price =
+        num(getCell(row, headers, ['Precio USD', 'Precio', 'Price USD', 'Price'])) ||
+        num(row[3]);
+
+      const gender = getGender(row, headers);
 
       return {
-        id: String(i + 1),
-        brand: getCell(r, headers, ['Marca', 'Brand']),
-        name: getCell(r, headers, ['Producto', 'Nombre', 'Name']),
-        category: getCell(r, headers, ['Tamaño', 'Tamano', 'Categoria', 'Categoría', 'Category']),
+        id: String(index + 1),
+        brand,
+        name,
+        category,
         gender,
-        price: num(
-          getCell(r, headers, ['Precio USD', 'Precio', 'Price USD', 'Price']) ||
-          r[3]
-        ),
+        price,
         stock: Math.floor(Math.random() * 20) + 5,
         sku: undefined,
         description: undefined,
-        imageUrl: getCell(r, headers, ['Imagen', 'URL Imagen', 'URLImagen', 'Image', 'Image URL'])
+        imageUrl: getCell(row, headers, [
+          'Imagen',
+          'URL Imagen',
+          'URLImagen',
+          'Image',
+          'Image URL'
+        ])
       };
     });
 }
