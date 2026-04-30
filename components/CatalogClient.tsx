@@ -23,7 +23,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [lastAdded, setLastAdded] = useState('');
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_PRODUCTS);
-  const [viewMode, setViewMode] = useState<'catalog' | 'list'>('catalog');
+  const [viewMode, setViewMode] = useState<'catalog' | 'list'>('list');
   const [selectedBrand, setSelectedBrand] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
 
@@ -209,41 +209,15 @@ export default function CatalogClient({ products }: { products: Product[] }) {
         <section>
 
           <div className="mb-5 rounded-2xl bg-white p-4 shadow-sm">
-            <div className="mb-4 grid gap-3 md:grid-cols-[1fr_auto]">
-              <input
-                className="w-full rounded-xl border border-neutral-300 px-4 py-3 outline-none focus:border-black"
-                placeholder="Buscar por producto, marca o tamaño..."
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  resetVisibleProducts();
-                }}
-              />
-
-              <div className="grid grid-cols-2 rounded-xl border border-neutral-300 p-1">
-                <button
-                  onClick={() => setViewMode('catalog')}
-                  className={`rounded-lg px-4 py-2 text-sm font-black ${
-                    viewMode === 'catalog'
-                      ? 'bg-black text-white'
-                      : 'bg-white text-black'
-                  }`}
-                >
-                  Catálogo
-                </button>
-
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`rounded-lg px-4 py-2 text-sm font-black ${
-                    viewMode === 'list'
-                      ? 'bg-black text-white'
-                      : 'bg-white text-black'
-                  }`}
-                >
-                  Lista
-                </button>
-              </div>
-            </div>
+            <input
+              className="mb-4 w-full rounded-xl border border-neutral-300 px-4 py-3 outline-none focus:border-black"
+              placeholder="Buscar por producto, marca o tamaño..."
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                resetVisibleProducts();
+              }}
+            />
 
             <div className="grid gap-3 md:grid-cols-2">
               <select
@@ -280,19 +254,39 @@ export default function CatalogClient({ products }: { products: Product[] }) {
             </div>
           </div>
 
-          <div className="mb-5 rounded-2xl border border-yellow-300 bg-yellow-100 p-4">
-            <p className="text-center font-bold text-yellow-800">
+          <div
+            className={`mb-5 rounded-2xl border p-4 ${
+              meetsMinimum
+                ? 'border-green-300 bg-green-100'
+                : 'border-yellow-300 bg-yellow-100'
+            }`}
+          >
+            <p
+              className={`text-center font-bold ${
+                meetsMinimum ? 'text-green-800' : 'text-yellow-800'
+              }`}
+            >
               Compra mínima: USD 300
             </p>
 
-            <div className="mt-3 h-3 overflow-hidden rounded-full bg-yellow-200">
+            <div
+              className={`mt-3 h-3 overflow-hidden rounded-full ${
+                meetsMinimum ? 'bg-green-200' : 'bg-yellow-200'
+              }`}
+            >
               <div
-                className="h-full rounded-full bg-yellow-600 transition-all"
+                className={`h-full rounded-full transition-all ${
+                  meetsMinimum ? 'bg-green-600' : 'bg-yellow-600'
+                }`}
                 style={{ width: `${minimumProgress}%` }}
               />
             </div>
 
-            <p className="mt-2 text-center text-sm font-semibold text-yellow-900">
+            <p
+              className={`mt-2 text-center text-sm font-semibold ${
+                meetsMinimum ? 'text-green-900' : 'text-yellow-900'
+              }`}
+            >
               {meetsMinimum
                 ? 'Ya alcanzaste el mínimo para enviar el pedido.'
                 : `Te faltan ${formatCurrency(MIN_ORDER - total)} para completar el mínimo.`}
@@ -338,6 +332,36 @@ export default function CatalogClient({ products }: { products: Product[] }) {
               <p><strong>Garantía:</strong> solo productos en mal estado o abiertos.</p>
             </div>
           </details>
+
+          <div className="mb-4 rounded-2xl bg-white p-4 shadow-sm">
+            <p className="mb-2 text-sm font-black text-neutral-700">
+              Tipo de vista
+            </p>
+
+            <div className="grid grid-cols-2 rounded-xl border border-neutral-300 p-1">
+              <button
+                onClick={() => setViewMode('catalog')}
+                className={`rounded-lg px-4 py-2 text-sm font-black ${
+                  viewMode === 'catalog'
+                    ? 'bg-black text-white'
+                    : 'bg-white text-black'
+                }`}
+              >
+                Catálogo
+              </button>
+
+              <button
+                onClick={() => setViewMode('list')}
+                className={`rounded-lg px-4 py-2 text-sm font-black ${
+                  viewMode === 'list'
+                    ? 'bg-black text-white'
+                    : 'bg-white text-black'
+                }`}
+              >
+                Lista mayorista
+              </button>
+            </div>
+          </div>
 
           <p className="mb-3 text-sm text-neutral-600">
             Mostrando {visibleProducts.length} de {filteredProducts.length} productos
@@ -667,71 +691,78 @@ export default function CatalogClient({ products }: { products: Product[] }) {
           )}
         </section>
 
-        <aside id="pedido" className="h-fit rounded-2xl bg-white p-5 shadow-sm lg:sticky lg:top-4">
-          <h2 className="mb-2 text-xl font-black">Pedido</h2>
-          <p className="mb-4 text-sm">{totalUnits} unidades</p>
+        <aside
+          id="pedido"
+          className="flex h-fit rounded-2xl bg-white p-5 shadow-sm lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:flex-col"
+        >
+          <div className="shrink-0">
+            <h2 className="mb-2 text-xl font-black">Pedido</h2>
+            <p className="mb-4 text-sm">{totalUnits} unidades</p>
 
-          {!meetsMinimum && (
-            <p className="mb-3 text-center text-sm font-semibold text-red-600">
-              Te faltan {formatCurrency(MIN_ORDER - total)} para completar el mínimo
-            </p>
-          )}
+            {!meetsMinimum && (
+              <p className="mb-3 text-center text-sm font-semibold text-red-600">
+                Te faltan {formatCurrency(MIN_ORDER - total)} para completar el mínimo
+              </p>
+            )}
+          </div>
 
-          {cart.length === 0 && (
-            <p className="rounded-xl bg-neutral-100 p-4 text-center text-sm text-neutral-600">
-              Todavía no agregaste productos.
-            </p>
-          )}
+          <div className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1">
+            {cart.length === 0 && (
+              <p className="rounded-xl bg-neutral-100 p-4 text-center text-sm text-neutral-600">
+                Todavía no agregaste productos.
+              </p>
+            )}
 
-          {cart.map((item) => (
-            <div key={item.id} className="mb-3 rounded border p-3">
-              <div className="flex justify-between gap-3">
-                <div>
-                  <p className="font-semibold">
-                    {item.name}
-                    {item.category ? ` (${item.category})` : ''}
-                  </p>
-                  <p className="text-sm text-neutral-500">
-                    {formatCurrency(item.price * item.quantity)}
-                  </p>
+            {cart.map((item) => (
+              <div key={item.id} className="mb-3 rounded border p-3">
+                <div className="flex justify-between gap-3">
+                  <div>
+                    <p className="font-semibold">
+                      {item.name}
+                      {item.category ? ` (${item.category})` : ''}
+                    </p>
+                    <p className="text-sm text-neutral-500">
+                      {formatCurrency(item.price * item.quantity)}
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => updateQuantity(item.id, 0)}
+                    className="text-red-500"
+                  >
+                    ✕
+                  </button>
                 </div>
 
-                <button
-                  onClick={() => updateQuantity(item.id, 0)}
-                  className="text-red-500"
-                >
-                  ✕
-                </button>
+                <div className="mt-2 flex items-center gap-2">
+                  <button
+                    onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                    className="h-8 w-8 rounded border"
+                  >
+                    -
+                  </button>
+
+                  <input
+                    className="h-8 w-12 rounded border text-center"
+                    type="number"
+                    value={item.quantity}
+                    onChange={(e) =>
+                      updateQuantity(item.id, Math.max(1, Number(e.target.value)))
+                    }
+                  />
+
+                  <button
+                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                    className="h-8 w-8 rounded border"
+                  >
+                    +
+                  </button>
+                </div>
               </div>
+            ))}
+          </div>
 
-              <div className="mt-2 flex items-center gap-2">
-                <button
-                  onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                  className="h-8 w-8 rounded border"
-                >
-                  -
-                </button>
-
-                <input
-                  className="h-8 w-12 rounded border text-center"
-                  type="number"
-                  value={item.quantity}
-                  onChange={(e) =>
-                    updateQuantity(item.id, Math.max(1, Number(e.target.value)))
-                  }
-                />
-
-                <button
-                  onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                  className="h-8 w-8 rounded border"
-                >
-                  +
-                </button>
-              </div>
-            </div>
-          ))}
-
-          <div className="space-y-2 border-t pt-4">
+          <div className="mt-4 shrink-0 space-y-2 border-t bg-white pt-4">
             <p className="text-lg font-black">
               Subtotal: {formatCurrency(total)}
             </p>
