@@ -85,6 +85,10 @@ export default function CatalogClient({ products }: { products: Product[] }) {
     setVisibleCount(INITIAL_VISIBLE_PRODUCTS);
   }
 
+  function getCartQuantity(productId: string) {
+    return cart.find((item) => item.id === productId)?.quantity || 0;
+  }
+
   function addToCart(product: Product) {
     const qty = Math.max(1, quantities[product.id] || 1);
 
@@ -187,7 +191,6 @@ export default function CatalogClient({ products }: { products: Product[] }) {
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <section>
 
-          {/* CONTROLES SUPERIORES */}
           <div className="mb-5 rounded-2xl bg-white p-4 shadow-sm">
             <div className="mb-4 grid gap-3 md:grid-cols-[1fr_auto]">
               <input
@@ -260,7 +263,6 @@ export default function CatalogClient({ products }: { products: Product[] }) {
             </div>
           </div>
 
-          {/* MÍNIMO */}
           <div className="mb-5 rounded-2xl border border-yellow-300 bg-yellow-100 p-4">
             <p className="text-center font-bold text-yellow-800">
               Compra mínima: USD 300
@@ -280,7 +282,6 @@ export default function CatalogClient({ products }: { products: Product[] }) {
             </p>
           </div>
 
-          {/* DESCUENTOS */}
           <div className="mb-5 rounded-2xl bg-white p-4 shadow-sm">
             <p className="font-black">Descuentos por volumen</p>
 
@@ -307,7 +308,6 @@ export default function CatalogClient({ products }: { products: Product[] }) {
             </p>
           </div>
 
-          {/* CONDICIONES */}
           <details className="mb-5 rounded-2xl bg-white p-4 shadow-sm">
             <summary className="cursor-pointer font-black">
               Condiciones de compra
@@ -326,109 +326,123 @@ export default function CatalogClient({ products }: { products: Product[] }) {
             Mostrando {visibleProducts.length} de {filteredProducts.length} productos
           </p>
 
-          {/* VISTA CATÁLOGO */}
           {viewMode === 'catalog' && (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {visibleProducts.map((product) => (
-                <article key={product.id} className="overflow-hidden rounded-2xl bg-white shadow-sm">
+              {visibleProducts.map((product) => {
+                const cartQty = getCartQuantity(product.id);
+                const isInCart = cartQty > 0;
 
-                  <div className="flex aspect-[4/3] items-center justify-center bg-neutral-100">
-                    {product.imageUrl ? (
-                      <img
-                        className="h-full w-full object-contain p-3"
-                        src={product.imageUrl}
-                        alt={product.name}
-                        loading="lazy"
-                        decoding="async"
-                      />
-                    ) : (
-                      <span className="text-sm text-neutral-400">Sin imagen</span>
+                return (
+                  <article
+                    key={product.id}
+                    className={`relative overflow-hidden rounded-2xl bg-white shadow-sm ${
+                      isInCart ? 'ring-2 ring-green-500' : ''
+                    }`}
+                  >
+                    {isInCart && (
+                      <div className="absolute left-3 top-3 z-10 rounded-full bg-green-600 px-3 py-1 text-xs font-black text-white shadow">
+                        ✔ En pedido: {cartQty}
+                      </div>
                     )}
-                  </div>
 
-                  <div className="space-y-3 p-4">
-                    <div>
-                      <p className="text-xs uppercase text-neutral-500">
-                        {product.brand}
-                      </p>
-
-                      <h2 className="text-lg font-bold">{product.name}</h2>
-
-                      {product.category && (
-                        <p className="text-sm text-neutral-600">
-                          {product.category}
-                        </p>
+                    <div className="flex aspect-[4/3] items-center justify-center bg-neutral-100">
+                      {product.imageUrl ? (
+                        <img
+                          className="h-full w-full object-contain p-3"
+                          src={product.imageUrl}
+                          alt={product.name}
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      ) : (
+                        <span className="text-sm text-neutral-400">Sin imagen</span>
                       )}
                     </div>
 
-                    <div>
-                      <p className="text-xl font-black">
-                        {formatCurrency(product.price)}
-                      </p>
-                      <p className="text-xs text-neutral-500">
-                        Stock: {product.stock}
-                      </p>
+                    <div className="space-y-3 p-4">
+                      <div>
+                        <p className="text-xs uppercase text-neutral-500">
+                          {product.brand}
+                        </p>
+
+                        <h2 className="text-lg font-bold">{product.name}</h2>
+
+                        {product.category && (
+                          <p className="text-sm text-neutral-600">
+                            {product.category}
+                          </p>
+                        )}
+                      </div>
+
+                      <div>
+                        <p className="text-xl font-black">
+                          {formatCurrency(product.price)}
+                        </p>
+                        <p className="text-xs text-neutral-500">
+                          Stock: {product.stock}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          onClick={() =>
+                            changeProductQuantity(
+                              product.id,
+                              (quantities[product.id] || 1) - 1
+                            )
+                          }
+                          className="h-8 w-8 rounded border"
+                        >
+                          -
+                        </button>
+
+                        <input
+                          type="number"
+                          className="w-12 rounded border text-center"
+                          value={quantities[product.id] || 1}
+                          onChange={(e) =>
+                            changeProductQuantity(product.id, Number(e.target.value))
+                          }
+                        />
+
+                        <button
+                          onClick={() =>
+                            changeProductQuantity(
+                              product.id,
+                              (quantities[product.id] || 1) + 1
+                            )
+                          }
+                          className="h-8 w-8 rounded border"
+                        >
+                          +
+                        </button>
+
+                        <button
+                          onClick={() => addToCart(product)}
+                          className={`rounded px-3 py-2 text-white ${
+                            isInCart ? 'bg-green-700' : 'bg-black'
+                          }`}
+                        >
+                          {isInCart ? 'Sumar más' : 'Agregar'}
+                        </button>
+
+                        <button
+                          onClick={() => addOneQuick(product)}
+                          className="rounded border border-black px-3 py-2 text-sm font-bold"
+                        >
+                          +1 rápido
+                        </button>
+                      </div>
                     </div>
-
-                    <div className="flex flex-wrap items-center gap-2">
-                      <button
-                        onClick={() =>
-                          changeProductQuantity(
-                            product.id,
-                            (quantities[product.id] || 1) - 1
-                          )
-                        }
-                        className="h-8 w-8 rounded border"
-                      >
-                        -
-                      </button>
-
-                      <input
-                        type="number"
-                        className="w-12 rounded border text-center"
-                        value={quantities[product.id] || 1}
-                        onChange={(e) =>
-                          changeProductQuantity(product.id, Number(e.target.value))
-                        }
-                      />
-
-                      <button
-                        onClick={() =>
-                          changeProductQuantity(
-                            product.id,
-                            (quantities[product.id] || 1) + 1
-                          )
-                        }
-                        className="h-8 w-8 rounded border"
-                      >
-                        +
-                      </button>
-
-                      <button
-                        onClick={() => addToCart(product)}
-                        className="rounded bg-black px-3 py-2 text-white"
-                      >
-                        Agregar
-                      </button>
-
-                      <button
-                        onClick={() => addOneQuick(product)}
-                        className="rounded border border-black px-3 py-2 text-sm font-bold"
-                      >
-                        +1 rápido
-                      </button>
-                    </div>
-                  </div>
-                </article>
-              ))}
+                  </article>
+                );
+              })}
             </div>
           )}
 
-          {/* VISTA LISTA MAYORISTA */}
           {viewMode === 'list' && (
             <div className="rounded-2xl bg-white shadow-sm">
 
-              {/* DESKTOP */}
               <div className="hidden overflow-x-auto md:block">
                 <table className="w-full text-sm">
                   <thead className="bg-neutral-100 text-left text-xs uppercase text-neutral-500">
@@ -439,163 +453,208 @@ export default function CatalogClient({ products }: { products: Product[] }) {
                       <th className="p-3">Categoría</th>
                       <th className="p-3">Precio</th>
                       <th className="p-3">Stock</th>
+                      <th className="p-3">Estado</th>
                       <th className="p-3">Cantidad</th>
                       <th className="p-3">Agregar</th>
                     </tr>
                   </thead>
 
                   <tbody>
-                    {visibleProducts.map((product) => (
-                      <tr key={product.id} className="border-t">
-                        <td className="p-3">
-                          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-neutral-100">
-                            {product.imageUrl ? (
-                              <img
-                                src={product.imageUrl}
-                                alt={product.name}
-                                className="h-full w-full object-contain p-1"
-                                loading="lazy"
-                                decoding="async"
-                              />
+                    {visibleProducts.map((product) => {
+                      const cartQty = getCartQuantity(product.id);
+                      const isInCart = cartQty > 0;
+
+                      return (
+                        <tr
+                          key={product.id}
+                          className={`border-t ${
+                            isInCart ? 'bg-green-50' : ''
+                          }`}
+                        >
+                          <td className="p-3">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-neutral-100">
+                              {product.imageUrl ? (
+                                <img
+                                  src={product.imageUrl}
+                                  alt={product.name}
+                                  className="h-full w-full object-contain p-1"
+                                  loading="lazy"
+                                  decoding="async"
+                                />
+                              ) : (
+                                <span className="text-xs text-neutral-400">—</span>
+                              )}
+                            </div>
+                          </td>
+
+                          <td className="p-3 font-bold">{product.name}</td>
+                          <td className="p-3">{product.brand}</td>
+                          <td className="p-3">{product.category}</td>
+                          <td className="p-3 font-black">{formatCurrency(product.price)}</td>
+                          <td className="p-3">{product.stock}</td>
+
+                          <td className="p-3">
+                            {isInCart ? (
+                              <span className="rounded-full bg-green-600 px-3 py-1 text-xs font-black text-white">
+                                En pedido: {cartQty}
+                              </span>
                             ) : (
-                              <span className="text-xs text-neutral-400">—</span>
+                              <span className="text-xs text-neutral-400">
+                                —
+                              </span>
                             )}
-                          </div>
-                        </td>
+                          </td>
 
-                        <td className="p-3 font-bold">{product.name}</td>
-                        <td className="p-3">{product.brand}</td>
-                        <td className="p-3">{product.category}</td>
-                        <td className="p-3 font-black">{formatCurrency(product.price)}</td>
-                        <td className="p-3">{product.stock}</td>
+                          <td className="p-3">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() =>
+                                  changeProductQuantity(
+                                    product.id,
+                                    (quantities[product.id] || 1) - 1
+                                  )
+                                }
+                                className="h-8 w-8 rounded border"
+                              >
+                                -
+                              </button>
 
-                        <td className="p-3">
-                          <div className="flex items-center gap-2">
+                              <input
+                                type="number"
+                                className="h-8 w-12 rounded border text-center"
+                                value={quantities[product.id] || 1}
+                                onChange={(e) =>
+                                  changeProductQuantity(product.id, Number(e.target.value))
+                                }
+                              />
+
+                              <button
+                                onClick={() =>
+                                  changeProductQuantity(
+                                    product.id,
+                                    (quantities[product.id] || 1) + 1
+                                  )
+                                }
+                                className="h-8 w-8 rounded border"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </td>
+
+                          <td className="p-3">
                             <button
-                              onClick={() =>
-                                changeProductQuantity(
-                                  product.id,
-                                  (quantities[product.id] || 1) - 1
-                                )
-                              }
-                              className="h-8 w-8 rounded border"
+                              onClick={() => addToCart(product)}
+                              className={`rounded-lg px-3 py-2 font-bold text-white ${
+                                isInCart ? 'bg-green-700' : 'bg-black'
+                              }`}
                             >
-                              -
+                              {isInCart ? 'Sumar' : 'Agregar'}
                             </button>
-
-                            <input
-                              type="number"
-                              className="h-8 w-12 rounded border text-center"
-                              value={quantities[product.id] || 1}
-                              onChange={(e) =>
-                                changeProductQuantity(product.id, Number(e.target.value))
-                              }
-                            />
-
-                            <button
-                              onClick={() =>
-                                changeProductQuantity(
-                                  product.id,
-                                  (quantities[product.id] || 1) + 1
-                                )
-                              }
-                              className="h-8 w-8 rounded border"
-                            >
-                              +
-                            </button>
-                          </div>
-                        </td>
-
-                        <td className="p-3">
-                          <button
-                            onClick={() => addToCart(product)}
-                            className="rounded-lg bg-black px-3 py-2 font-bold text-white"
-                          >
-                            Agregar
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
 
-              {/* MOBILE */}
               <div className="grid gap-3 p-3 md:hidden">
-                {visibleProducts.map((product) => (
-                  <div key={product.id} className="rounded-xl border p-3">
-                    <div className="flex gap-3">
-                      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-neutral-100">
-                        {product.imageUrl ? (
-                          <img
-                            src={product.imageUrl}
-                            alt={product.name}
-                            className="h-full w-full object-contain p-1"
-                            loading="lazy"
-                            decoding="async"
-                          />
-                        ) : (
-                          <span className="text-xs text-neutral-400">Sin img</span>
-                        )}
-                      </div>
+                {visibleProducts.map((product) => {
+                  const cartQty = getCartQuantity(product.id);
+                  const isInCart = cartQty > 0;
 
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs uppercase text-neutral-500">
-                          {product.brand}
-                        </p>
-                        <h3 className="font-bold leading-tight">{product.name}</h3>
-                        <p className="text-sm text-neutral-600">{product.category}</p>
+                  return (
+                    <div
+                      key={product.id}
+                      className={`rounded-xl border p-3 ${
+                        isInCart ? 'border-green-500 bg-green-50' : ''
+                      }`}
+                    >
+                      <div className="flex gap-3">
+                        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-neutral-100">
+                          {product.imageUrl ? (
+                            <img
+                              src={product.imageUrl}
+                              alt={product.name}
+                              className="h-full w-full object-contain p-1"
+                              loading="lazy"
+                              decoding="async"
+                            />
+                          ) : (
+                            <span className="text-xs text-neutral-400">Sin img</span>
+                          )}
+                        </div>
 
-                        <div className="mt-1 flex justify-between gap-3">
-                          <p className="font-black">{formatCurrency(product.price)}</p>
-                          <p className="text-xs text-neutral-500">Stock: {product.stock}</p>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="truncate text-xs uppercase text-neutral-500">
+                              {product.brand}
+                            </p>
+
+                            {isInCart && (
+                              <span className="shrink-0 rounded-full bg-green-600 px-2 py-1 text-[11px] font-black text-white">
+                                {cartQty} en pedido
+                              </span>
+                            )}
+                          </div>
+
+                          <h3 className="font-bold leading-tight">{product.name}</h3>
+                          <p className="text-sm text-neutral-600">{product.category}</p>
+
+                          <div className="mt-1 flex justify-between gap-3">
+                            <p className="font-black">{formatCurrency(product.price)}</p>
+                            <p className="text-xs text-neutral-500">Stock: {product.stock}</p>
+                          </div>
                         </div>
                       </div>
+
+                      <div className="mt-3 flex items-center gap-2">
+                        <button
+                          onClick={() =>
+                            changeProductQuantity(
+                              product.id,
+                              (quantities[product.id] || 1) - 1
+                            )
+                          }
+                          className="h-9 w-9 rounded border"
+                        >
+                          -
+                        </button>
+
+                        <input
+                          type="number"
+                          className="h-9 w-14 rounded border text-center"
+                          value={quantities[product.id] || 1}
+                          onChange={(e) =>
+                            changeProductQuantity(product.id, Number(e.target.value))
+                          }
+                        />
+
+                        <button
+                          onClick={() =>
+                            changeProductQuantity(
+                              product.id,
+                              (quantities[product.id] || 1) + 1
+                            )
+                          }
+                          className="h-9 w-9 rounded border"
+                        >
+                          +
+                        </button>
+
+                        <button
+                          onClick={() => addToCart(product)}
+                          className={`ml-auto rounded-lg px-4 py-2 font-bold text-white ${
+                            isInCart ? 'bg-green-700' : 'bg-black'
+                          }`}
+                        >
+                          {isInCart ? 'Sumar' : 'Agregar'}
+                        </button>
+                      </div>
                     </div>
-
-                    <div className="mt-3 flex items-center gap-2">
-                      <button
-                        onClick={() =>
-                          changeProductQuantity(
-                            product.id,
-                            (quantities[product.id] || 1) - 1
-                          )
-                        }
-                        className="h-9 w-9 rounded border"
-                      >
-                        -
-                      </button>
-
-                      <input
-                        type="number"
-                        className="h-9 w-14 rounded border text-center"
-                        value={quantities[product.id] || 1}
-                        onChange={(e) =>
-                          changeProductQuantity(product.id, Number(e.target.value))
-                        }
-                      />
-
-                      <button
-                        onClick={() =>
-                          changeProductQuantity(
-                            product.id,
-                            (quantities[product.id] || 1) + 1
-                          )
-                        }
-                        className="h-9 w-9 rounded border"
-                      >
-                        +
-                      </button>
-
-                      <button
-                        onClick={() => addToCart(product)}
-                        className="ml-auto rounded-lg bg-black px-4 py-2 font-bold text-white"
-                      >
-                        Agregar
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -612,7 +671,6 @@ export default function CatalogClient({ products }: { products: Product[] }) {
           )}
         </section>
 
-        {/* CARRITO */}
         <aside id="pedido" className="h-fit rounded-2xl bg-white p-5 shadow-sm lg:sticky lg:top-4">
           <h2 className="mb-2 text-xl font-black">Pedido</h2>
           <p className="mb-4 text-sm">{totalUnits} unidades</p>
@@ -727,7 +785,6 @@ export default function CatalogClient({ products }: { products: Product[] }) {
         </aside>
       </div>
 
-      {/* BARRA MOBILE */}
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t bg-white p-3 shadow-[0_-4px_20px_rgba(0,0,0,0.12)] lg:hidden">
         <div className="mb-2 flex items-center justify-between">
           <div>
