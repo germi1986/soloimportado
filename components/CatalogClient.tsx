@@ -19,7 +19,8 @@ export default function CatalogClient({ products }: { products: Product[] }) {
     if (!normalizedQuery) return products;
 
     return products.filter((product) =>
-      [product.name, product.brand, product.category]
+      [product.name, product.brand, product.category, product.sku]
+        .filter(Boolean)
         .join(' ')
         .toLowerCase()
         .includes(normalizedQuery)
@@ -29,7 +30,6 @@ export default function CatalogClient({ products }: { products: Product[] }) {
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const totalUnits = cart.reduce((sum, item) => sum + item.quantity, 0);
   const meetsMinimum = total >= MIN_ORDER;
-  const progress = Math.min((total / MIN_ORDER) * 100, 100);
 
   function addToCart(product: Product) {
     const qty = quantities[product.id] || 1;
@@ -62,10 +62,6 @@ export default function CatalogClient({ products }: { products: Product[] }) {
     );
   }
 
-  function clearCart() {
-    setCart([]);
-  }
-
   function buildWhatsAppText() {
     const lines = cart.map((item) => {
       const size = item.category ? ` (${item.category})` : '';
@@ -73,7 +69,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
     });
 
     return encodeURIComponent(
-      `Hola! Quiero hacer este pedido:\n\n${lines.join('\n')}\n\nTotal: ${formatCurrency(total)}\n\nForma de pago:\nDirección:\nHorario:`
+      `Hola, quiero hacer este pedido mayorista:\n\n${lines.join('\n')}\n\nTotal: ${formatCurrency(total)}`
     );
   }
 
@@ -81,117 +77,207 @@ export default function CatalogClient({ products }: { products: Product[] }) {
     <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
       <section>
 
-        {/* BUSCADOR */}
+        {/* 🔍 BUSCADOR */}
         <div className="mb-5 rounded-2xl bg-white p-4 shadow-sm">
           <input
-            className="w-full rounded-xl border px-4 py-3"
-            placeholder="Buscar..."
+            className="w-full rounded-xl border border-neutral-300 px-4 py-3 outline-none focus:border-black"
+            placeholder="Buscar por producto, marca o tamaño..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
 
-        {/* MINIMO */}
-        <div className="mb-5 rounded-2xl bg-yellow-100 p-3 text-center">
-          Compra mínima: USD 300
+        {/* 🚨 MÍNIMO */}
+        <div className="mb-5 rounded-2xl bg-yellow-100 border border-yellow-300 p-4 text-center">
+          <p className="font-bold text-yellow-800">
+            Compra mínima: USD 300
+          </p>
         </div>
 
-        {/* PRODUCTOS */}
+        {/* 📄 CONDICIONES */}
+        <details className="mb-5 rounded-2xl bg-white p-4 shadow-sm">
+          <summary className="cursor-pointer font-black">
+            Condiciones de compra
+          </summary>
+
+          <div className="mt-4 space-y-3 text-sm text-neutral-700">
+            <p><strong>Pagos:</strong> Efectivo (CABA/GBA), Transferencia (+5%), USDT sin recargo.</p>
+            <p><strong>Envíos:</strong> Gratis CABA/GBA. Interior a coordinar.</p>
+            <p><strong>Descuentos:</strong> desde USD 500 (5%) hasta USD 2000 (12%).</p>
+            <p><strong>Entrega:</strong> hasta 3 días hábiles. Stock sujeto a disponibilidad.</p>
+            <p><strong>Garantía:</strong> solo productos en mal estado o abiertos.</p>
+          </div>
+        </details>
+
+        {/* 🧱 PRODUCTOS */}
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {filteredProducts.map((product) => (
-            <article key={product.id} className="bg-white p-3 rounded shadow">
+            <article key={product.id} className="rounded-2xl bg-white shadow-sm overflow-hidden">
 
-              <img
-                src={product.imageUrl}
-                className="h-40 w-full object-contain"
-              />
+              <div className="flex aspect-[4/3] items-center justify-center bg-neutral-100">
+                {product.imageUrl ? (
+                  <img
+                    className="h-full w-full object-contain p-3"
+                    src={product.imageUrl}
+                    alt={product.name}
+                  />
+                ) : (
+                  <span className="text-sm text-neutral-400">Sin imagen</span>
+                )}
+              </div>
 
-              <p className="text-xs">{product.brand}</p>
-              <h2 className="font-bold">{product.name}</h2>
-              <p>{product.category}</p>
+              <div className="p-4 space-y-3">
+                <div>
+                  <p className="text-xs text-neutral-500 uppercase">
+                    {product.brand}
+                  </p>
 
-              <p className="font-black">{formatCurrency(product.price)}</p>
+                  <h2 className="font-bold text-lg">{product.name}</h2>
 
-              <div className="flex gap-2 mt-2">
-                <button onClick={() =>
-                  setQuantities(q => ({...q,[product.id]:Math.max(1,(q[product.id]||1)-1)}))
-                }>-</button>
+                  {product.category && (
+                    <p className="text-sm text-neutral-600">
+                      {product.category}
+                    </p>
+                  )}
+                </div>
 
-                <input
-                  value={quantities[product.id] || 1}
-                  onChange={(e) =>
-                    setQuantities(q => ({...q,[product.id]:Number(e.target.value)}))
-                  }
-                  className="w-10 text-center border"
-                />
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-xl font-black">
+                      {formatCurrency(product.price)}
+                    </p>
+                    <p className="text-xs text-neutral-500">
+                      Stock: {product.stock}
+                    </p>
+                  </div>
 
-                <button onClick={() =>
-                  setQuantities(q => ({...q,[product.id]:(q[product.id]||1)+1}))
-                }>+</button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() =>
+                        setQuantities((q) => ({
+                          ...q,
+                          [product.id]: Math.max(1, (q[product.id] || 1) - 1)
+                        }))
+                      }
+                      className="h-8 w-8 border rounded"
+                    >
+                      -
+                    </button>
 
-                <button onClick={() => addToCart(product)}>
-                  Agregar
-                </button>
+                    <input
+                      type="number"
+                      className="w-10 text-center border rounded"
+                      value={quantities[product.id] || 1}
+                      onChange={(e) =>
+                        setQuantities((q) => ({
+                          ...q,
+                          [product.id]: Number(e.target.value)
+                        }))
+                      }
+                    />
+
+                    <button
+                      onClick={() =>
+                        setQuantities((q) => ({
+                          ...q,
+                          [product.id]: (q[product.id] || 1) + 1
+                        }))
+                      }
+                      className="h-8 w-8 border rounded"
+                    >
+                      +
+                    </button>
+
+                    <button
+                      onClick={() => addToCart(product)}
+                      className="ml-2 bg-black text-white px-3 py-2 rounded"
+                    >
+                      Agregar
+                    </button>
+                  </div>
+                </div>
               </div>
             </article>
           ))}
         </div>
       </section>
 
-      {/* CARRITO */}
-      <aside className="bg-white p-4 rounded shadow">
-
-        <h2>Pedido ({totalUnits})</h2>
-
-        {/* PROGRESO */}
-        <div className="my-3">
-          <div className="h-2 bg-gray-200 rounded">
-            <div
-              className="h-2 bg-green-600"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          <p className="text-xs mt-1">
-            {formatCurrency(total)} / {formatCurrency(MIN_ORDER)}
-          </p>
-        </div>
-
-        <button onClick={clearCart} className="text-red-500 text-sm">
-          Vaciar carrito
-        </button>
-
-        {cart.map((item) => (
-          <div key={item.id} className="border p-2 mt-2">
-            <p>{item.name} ({item.category})</p>
-            <p>{formatCurrency(item.price * item.quantity)}</p>
-
-            <div className="flex gap-2">
-              <button onClick={() => updateQuantity(item.id, item.quantity - 1)}>-</button>
-              <input value={item.quantity} onChange={(e)=>updateQuantity(item.id,Number(e.target.value))}/>
-              <button onClick={() => updateQuantity(item.id, item.quantity + 1)}>+</button>
-            </div>
-          </div>
-        ))}
-
-        <p className="mt-3 font-bold">
-          Total: {formatCurrency(total)}
-        </p>
+      {/* 🛒 CARRITO */}
+      <aside className="bg-white p-5 rounded-2xl shadow-sm">
+        <h2 className="font-black text-xl mb-2">Pedido</h2>
+        <p className="text-sm mb-4">{totalUnits} unidades</p>
 
         {!meetsMinimum && (
-          <p className="text-red-500 text-sm">
-            Te faltan {formatCurrency(MIN_ORDER - total)}
+          <p className="mb-3 text-sm text-red-600 text-center">
+            Te faltan USD {(MIN_ORDER - total).toFixed(2)} para completar el mínimo
           </p>
         )}
 
-        <a
-          className={`block mt-3 text-center py-2 ${
-            meetsMinimum ? 'bg-green-600 text-white' : 'bg-gray-400'
-          }`}
-          href={meetsMinimum ? `https://wa.me/54911XXXXXXXX?text=${buildWhatsAppText()}` : undefined}
-        >
-          {meetsMinimum ? 'Enviar pedido' : 'Mínimo USD 300'}
-        </a>
+        {cart.map((item) => (
+          <div key={item.id} className="mb-3 border p-3 rounded">
+            
+            <div className="flex justify-between">
+              <div>
+                <p className="font-semibold">
+                  {item.name} ({item.category})
+                </p>
+                <p className="text-sm text-neutral-500">
+                  {formatCurrency(item.price * item.quantity)}
+                </p>
+              </div>
 
+              <button
+                onClick={() => updateQuantity(item.id, 0)}
+                className="text-red-500"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mt-2 flex items-center gap-2">
+              <button
+                onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                className="h-8 w-8 border rounded"
+              >
+                -
+              </button>
+
+              <input
+                className="h-8 w-12 border rounded text-center"
+                type="number"
+                value={item.quantity}
+                onChange={(e) => updateQuantity(item.id, Number(e.target.value))}
+              />
+
+              <button
+                onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                className="h-8 w-8 border rounded"
+              >
+                +
+              </button>
+            </div>
+
+          </div>
+        ))}
+
+        <div className="border-t pt-4">
+          <p className="font-black text-lg">
+            Total: {formatCurrency(total)}
+          </p>
+
+          <a
+            className={`block mt-3 text-white text-center py-2 rounded ${
+              meetsMinimum ? 'bg-green-600' : 'bg-gray-400 cursor-not-allowed'
+            }`}
+            href={meetsMinimum ? `https://wa.me/?text=${buildWhatsAppText()}` : undefined}
+            onClick={(e) => {
+              if (!meetsMinimum) e.preventDefault();
+            }}
+            target="_blank"
+          >
+            {meetsMinimum ? 'Enviar pedido' : 'Mínimo USD 300'}
+          </a>
+        </div>
       </aside>
     </div>
   );
