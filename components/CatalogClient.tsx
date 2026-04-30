@@ -26,6 +26,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
   const [viewMode, setViewMode] = useState<'catalog' | 'list'>('list');
   const [selectedBrand, setSelectedBrand] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [sortOrder, setSortOrder] = useState<'none' | 'asc' | 'desc'>('none');
 
   const brands = useMemo(() => {
     return Array.from(new Set(products.map((p) => p.brand).filter(Boolean))).sort();
@@ -38,7 +39,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
   const filteredProducts = useMemo(() => {
     const normalizedQuery = query.toLowerCase().trim();
 
-    return products.filter((product) => {
+    let result = products.filter((product) => {
       const matchesQuery =
         !normalizedQuery ||
         [product.name, product.brand, product.category, product.sku]
@@ -55,7 +56,17 @@ export default function CatalogClient({ products }: { products: Product[] }) {
 
       return matchesQuery && matchesBrand && matchesCategory;
     });
-  }, [products, query, selectedBrand, selectedCategory]);
+
+    if (sortOrder === 'asc') {
+      result = [...result].sort((a, b) => a.price - b.price);
+    }
+
+    if (sortOrder === 'desc') {
+      result = [...result].sort((a, b) => b.price - a.price);
+    }
+
+    return result;
+  }, [products, query, selectedBrand, selectedCategory, sortOrder]);
 
   const visibleProducts = filteredProducts.slice(0, visibleCount);
   const hasMoreProducts = visibleCount < filteredProducts.length;
@@ -219,7 +230,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
               }}
             />
 
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-3 md:grid-cols-3">
               <select
                 className="rounded-xl border border-neutral-300 px-4 py-3 outline-none focus:border-black"
                 value={selectedBrand}
@@ -250,6 +261,19 @@ export default function CatalogClient({ products }: { products: Product[] }) {
                     {category}
                   </option>
                 ))}
+              </select>
+
+              <select
+                className="rounded-xl border border-neutral-300 px-4 py-3 outline-none focus:border-black"
+                value={sortOrder}
+                onChange={(e) => {
+                  setSortOrder(e.target.value as 'none' | 'asc' | 'desc');
+                  resetVisibleProducts();
+                }}
+              >
+                <option value="none">Ordenar por precio</option>
+                <option value="asc">Precio: menor a mayor</option>
+                <option value="desc">Precio: mayor a menor</option>
               </select>
             </div>
           </div>
