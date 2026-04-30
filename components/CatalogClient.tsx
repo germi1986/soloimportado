@@ -37,7 +37,6 @@ export default function CatalogClient({ products }: { products: Product[] }) {
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const totalUnits = cart.reduce((sum, item) => sum + item.quantity, 0);
   const meetsMinimum = total >= MIN_ORDER;
-
   const minimumProgress = Math.min((total / MIN_ORDER) * 100, 100);
 
   const currentDiscount =
@@ -126,8 +125,10 @@ export default function CatalogClient({ products }: { products: Product[] }) {
     );
   }
 
+  const whatsappHref = `https://wa.me/5491170612311?text=${buildWhatsAppText()}`;
+
   return (
-    <div className="relative grid gap-6 lg:grid-cols-[1fr_360px]">
+    <div className="relative pb-28 lg:pb-0">
 
       {lastAdded && (
         <div className="fixed top-4 right-4 z-50 rounded-xl bg-green-600 px-4 py-3 text-sm font-bold text-white shadow-lg">
@@ -135,293 +136,341 @@ export default function CatalogClient({ products }: { products: Product[] }) {
         </div>
       )}
 
-      <section>
+      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+        <section>
 
-        {/* 🔍 BUSCADOR */}
-        <div className="mb-5 rounded-2xl bg-white p-4 shadow-sm">
-          <input
-            className="w-full rounded-xl border border-neutral-300 px-4 py-3 outline-none focus:border-black"
-            placeholder="Buscar por producto, marca o tamaño..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
-
-        {/* 🚨 MÍNIMO + PROGRESO */}
-        <div className="mb-5 rounded-2xl bg-yellow-100 border border-yellow-300 p-4">
-          <p className="text-center font-bold text-yellow-800">
-            Compra mínima: USD 300
-          </p>
-
-          <div className="mt-3 h-3 overflow-hidden rounded-full bg-yellow-200">
-            <div
-              className="h-full rounded-full bg-yellow-600 transition-all"
-              style={{ width: `${minimumProgress}%` }}
+          {/* 🔍 BUSCADOR */}
+          <div className="mb-5 rounded-2xl bg-white p-4 shadow-sm">
+            <input
+              className="w-full rounded-xl border border-neutral-300 px-4 py-3 outline-none focus:border-black"
+              placeholder="Buscar por producto, marca o tamaño..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
             />
           </div>
 
-          <p className="mt-2 text-center text-sm font-semibold text-yellow-900">
-            {meetsMinimum
-              ? 'Ya alcanzaste el mínimo para enviar el pedido.'
-              : `Te faltan ${formatCurrency(MIN_ORDER - total)} para completar el mínimo.`}
-          </p>
-        </div>
+          {/* 🚨 MÍNIMO + PROGRESO */}
+          <div className="mb-5 rounded-2xl bg-yellow-100 border border-yellow-300 p-4">
+            <p className="text-center font-bold text-yellow-800">
+              Compra mínima: USD 300
+            </p>
 
-        {/* 🎁 DESCUENTOS DINÁMICOS */}
-        <div className="mb-5 rounded-2xl bg-white p-4 shadow-sm">
-          <p className="font-black">Descuentos por volumen</p>
-
-          <div className="mt-3 grid gap-2 text-sm">
-            {DISCOUNT_TIERS.map((tier) => (
+            <div className="mt-3 h-3 overflow-hidden rounded-full bg-yellow-200">
               <div
-                key={tier.amount}
-                className={`flex justify-between rounded-xl border p-3 ${
-                  total >= tier.amount
-                    ? 'border-green-400 bg-green-50 text-green-800'
-                    : 'border-neutral-200 bg-neutral-50 text-neutral-600'
-                }`}
-              >
-                <span>Desde {formatCurrency(tier.amount)}</span>
-                <strong>{tier.percent}% OFF</strong>
-              </div>
-            ))}
+                className="h-full rounded-full bg-yellow-600 transition-all"
+                style={{ width: `${minimumProgress}%` }}
+              />
+            </div>
+
+            <p className="mt-2 text-center text-sm font-semibold text-yellow-900">
+              {meetsMinimum
+                ? 'Ya alcanzaste el mínimo para enviar el pedido.'
+                : `Te faltan ${formatCurrency(MIN_ORDER - total)} para completar el mínimo.`}
+            </p>
           </div>
 
-          <p className="mt-3 text-sm font-semibold">
-            {nextDiscount
-              ? `Te faltan ${formatCurrency(
-                  nextDiscount.amount - total
-                )} para activar el ${nextDiscount.percent}% OFF.`
-              : 'Ya alcanzaste el mayor descuento disponible.'}
-          </p>
-        </div>
+          {/* 🎁 DESCUENTOS DINÁMICOS */}
+          <div className="mb-5 rounded-2xl bg-white p-4 shadow-sm">
+            <p className="font-black">Descuentos por volumen</p>
 
-        {/* 📄 CONDICIONES */}
-        <details className="mb-5 rounded-2xl bg-white p-4 shadow-sm">
-          <summary className="cursor-pointer font-black">
-            Condiciones de compra
-          </summary>
+            <div className="mt-3 grid gap-2 text-sm">
+              {DISCOUNT_TIERS.map((tier) => (
+                <div
+                  key={tier.amount}
+                  className={`flex justify-between rounded-xl border p-3 ${
+                    total >= tier.amount
+                      ? 'border-green-400 bg-green-50 text-green-800'
+                      : 'border-neutral-200 bg-neutral-50 text-neutral-600'
+                  }`}
+                >
+                  <span>Desde {formatCurrency(tier.amount)}</span>
+                  <strong>{tier.percent}% OFF</strong>
+                </div>
+              ))}
+            </div>
 
-          <div className="mt-4 space-y-3 text-sm text-neutral-700">
-            <p><strong>Pagos:</strong> Efectivo (CABA/GBA), Transferencia (+5%), USDT sin recargo.</p>
-            <p><strong>Envíos:</strong> Gratis CABA/GBA. Interior a coordinar.</p>
-            <p><strong>Descuentos:</strong> desde USD 500 (5%) hasta USD 2000 (12%).</p>
-            <p><strong>Entrega:</strong> hasta 3 días hábiles. Stock sujeto a disponibilidad.</p>
-            <p><strong>Garantía:</strong> solo productos en mal estado o abiertos.</p>
+            <p className="mt-3 text-sm font-semibold">
+              {nextDiscount
+                ? `Te faltan ${formatCurrency(
+                    nextDiscount.amount - total
+                  )} para activar el ${nextDiscount.percent}% OFF.`
+                : 'Ya alcanzaste el mayor descuento disponible.'}
+            </p>
           </div>
-        </details>
 
-        {/* 🧱 PRODUCTOS */}
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {filteredProducts.map((product) => (
-            <article key={product.id} className="rounded-2xl bg-white shadow-sm overflow-hidden">
+          {/* 📄 CONDICIONES */}
+          <details className="mb-5 rounded-2xl bg-white p-4 shadow-sm">
+            <summary className="cursor-pointer font-black">
+              Condiciones de compra
+            </summary>
 
-              <div className="flex aspect-[4/3] items-center justify-center bg-neutral-100">
-                {product.imageUrl ? (
-                  <img
-                    className="h-full w-full object-contain p-3"
-                    src={product.imageUrl}
-                    alt={product.name}
-                  />
-                ) : (
-                  <span className="text-sm text-neutral-400">Sin imagen</span>
-                )}
-              </div>
+            <div className="mt-4 space-y-3 text-sm text-neutral-700">
+              <p><strong>Pagos:</strong> Efectivo (CABA/GBA), Transferencia (+5%), USDT sin recargo.</p>
+              <p><strong>Envíos:</strong> Gratis CABA/GBA. Interior a coordinar.</p>
+              <p><strong>Descuentos:</strong> desde USD 500 (5%) hasta USD 2000 (12%).</p>
+              <p><strong>Entrega:</strong> hasta 3 días hábiles. Stock sujeto a disponibilidad.</p>
+              <p><strong>Garantía:</strong> solo productos en mal estado o abiertos.</p>
+            </div>
+          </details>
 
-              <div className="p-4 space-y-3">
-                <div>
-                  <p className="text-xs text-neutral-500 uppercase">
-                    {product.brand}
-                  </p>
+          {/* 🧱 PRODUCTOS */}
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {filteredProducts.map((product) => (
+              <article key={product.id} className="rounded-2xl bg-white shadow-sm overflow-hidden">
 
-                  <h2 className="font-bold text-lg">{product.name}</h2>
-
-                  {product.category && (
-                    <p className="text-sm text-neutral-600">
-                      {product.category}
-                    </p>
+                <div className="flex aspect-[4/3] items-center justify-center bg-neutral-100">
+                  {product.imageUrl ? (
+                    <img
+                      className="h-full w-full object-contain p-3"
+                      src={product.imageUrl}
+                      alt={product.name}
+                    />
+                  ) : (
+                    <span className="text-sm text-neutral-400">Sin imagen</span>
                   )}
                 </div>
 
-                <div>
-                  <p className="text-xl font-black">
-                    {formatCurrency(product.price)}
-                  </p>
-                  <p className="text-xs text-neutral-500">
-                    Stock: {product.stock}
-                  </p>
+                <div className="p-4 space-y-3">
+                  <div>
+                    <p className="text-xs text-neutral-500 uppercase">
+                      {product.brand}
+                    </p>
+
+                    <h2 className="font-bold text-lg">{product.name}</h2>
+
+                    {product.category && (
+                      <p className="text-sm text-neutral-600">
+                        {product.category}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <p className="text-xl font-black">
+                      {formatCurrency(product.price)}
+                    </p>
+                    <p className="text-xs text-neutral-500">
+                      Stock: {product.stock}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      onClick={() =>
+                        setQuantities((q) => ({
+                          ...q,
+                          [product.id]: Math.max(1, (q[product.id] || 1) - 1)
+                        }))
+                      }
+                      className="h-8 w-8 border rounded"
+                    >
+                      -
+                    </button>
+
+                    <input
+                      type="number"
+                      className="w-12 text-center border rounded"
+                      value={quantities[product.id] || 1}
+                      onChange={(e) =>
+                        setQuantities((q) => ({
+                          ...q,
+                          [product.id]: Math.max(1, Number(e.target.value))
+                        }))
+                      }
+                    />
+
+                    <button
+                      onClick={() =>
+                        setQuantities((q) => ({
+                          ...q,
+                          [product.id]: (q[product.id] || 1) + 1
+                        }))
+                      }
+                      className="h-8 w-8 border rounded"
+                    >
+                      +
+                    </button>
+
+                    <button
+                      onClick={() => addToCart(product)}
+                      className="bg-black text-white px-3 py-2 rounded"
+                    >
+                      Agregar
+                    </button>
+
+                    <button
+                      onClick={() => addOneQuick(product)}
+                      className="border border-black px-3 py-2 rounded text-sm font-bold"
+                    >
+                      +1 rápido
+                    </button>
+                  </div>
                 </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    onClick={() =>
-                      setQuantities((q) => ({
-                        ...q,
-                        [product.id]: Math.max(1, (q[product.id] || 1) - 1)
-                      }))
-                    }
-                    className="h-8 w-8 border rounded"
-                  >
-                    -
-                  </button>
-
-                  <input
-                    type="number"
-                    className="w-12 text-center border rounded"
-                    value={quantities[product.id] || 1}
-                    onChange={(e) =>
-                      setQuantities((q) => ({
-                        ...q,
-                        [product.id]: Math.max(1, Number(e.target.value))
-                      }))
-                    }
-                  />
-
-                  <button
-                    onClick={() =>
-                      setQuantities((q) => ({
-                        ...q,
-                        [product.id]: (q[product.id] || 1) + 1
-                      }))
-                    }
-                    className="h-8 w-8 border rounded"
-                  >
-                    +
-                  </button>
-
-                  <button
-                    onClick={() => addToCart(product)}
-                    className="bg-black text-white px-3 py-2 rounded"
-                  >
-                    Agregar
-                  </button>
-
-                  <button
-                    onClick={() => addOneQuick(product)}
-                    className="border border-black px-3 py-2 rounded text-sm font-bold"
-                  >
-                    +1 rápido
-                  </button>
-                </div>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      {/* 🛒 CARRITO */}
-      <aside className="bg-white p-5 rounded-2xl shadow-sm h-fit lg:sticky lg:top-4">
-        <h2 className="font-black text-xl mb-2">Pedido</h2>
-        <p className="text-sm mb-4">{totalUnits} unidades</p>
-
-        {!meetsMinimum && (
-          <p className="mb-3 text-sm text-red-600 text-center font-semibold">
-            Te faltan {formatCurrency(MIN_ORDER - total)} para completar el mínimo
-          </p>
-        )}
-
-        {cart.length === 0 && (
-          <p className="rounded-xl bg-neutral-100 p-4 text-center text-sm text-neutral-600">
-            Todavía no agregaste productos.
-          </p>
-        )}
-
-        {cart.map((item) => (
-          <div key={item.id} className="mb-3 border p-3 rounded">
-
-            <div className="flex justify-between gap-3">
-              <div>
-                <p className="font-semibold">
-                  {item.name}
-                  {item.category ? ` (${item.category})` : ''}
-                </p>
-                <p className="text-sm text-neutral-500">
-                  {formatCurrency(item.price * item.quantity)}
-                </p>
-              </div>
-
-              <button
-                onClick={() => updateQuantity(item.id, 0)}
-                className="text-red-500"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="mt-2 flex items-center gap-2">
-              <button
-                onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                className="h-8 w-8 border rounded"
-              >
-                -
-              </button>
-
-              <input
-                className="h-8 w-12 border rounded text-center"
-                type="number"
-                value={item.quantity}
-                onChange={(e) =>
-                  updateQuantity(item.id, Math.max(1, Number(e.target.value)))
-                }
-              />
-
-              <button
-                onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                className="h-8 w-8 border rounded"
-              >
-                +
-              </button>
-            </div>
-
+              </article>
+            ))}
           </div>
-        ))}
+        </section>
 
-        <div className="border-t pt-4 space-y-2">
-          <p className="font-black text-lg">
-            Subtotal: {formatCurrency(total)}
-          </p>
+        {/* 🛒 CARRITO */}
+        <aside id="pedido" className="bg-white p-5 rounded-2xl shadow-sm h-fit lg:sticky lg:top-4">
+          <h2 className="font-black text-xl mb-2">Pedido</h2>
+          <p className="text-sm mb-4">{totalUnits} unidades</p>
 
-          {currentDiscount && (
-            <>
-              <p className="text-sm font-bold text-green-700">
-                Descuento aplicado: {currentDiscount.percent}% OFF
-              </p>
-              <p className="text-sm text-green-700">
-                Ahorrás {formatCurrency(discountAmount)}
-              </p>
-              <p className="font-black text-xl">
-                Total final: {formatCurrency(finalTotal)}
-              </p>
-            </>
-          )}
-
-          {!currentDiscount && nextDiscount && total > 0 && (
-            <p className="text-sm font-semibold text-neutral-700">
-              Agregá {formatCurrency(nextDiscount.amount - total)} más y activás {nextDiscount.percent}% OFF.
+          {!meetsMinimum && (
+            <p className="mb-3 text-sm text-red-600 text-center font-semibold">
+              Te faltan {formatCurrency(MIN_ORDER - total)} para completar el mínimo
             </p>
           )}
 
+          {cart.length === 0 && (
+            <p className="rounded-xl bg-neutral-100 p-4 text-center text-sm text-neutral-600">
+              Todavía no agregaste productos.
+            </p>
+          )}
+
+          {cart.map((item) => (
+            <div key={item.id} className="mb-3 border p-3 rounded">
+
+              <div className="flex justify-between gap-3">
+                <div>
+                  <p className="font-semibold">
+                    {item.name}
+                    {item.category ? ` (${item.category})` : ''}
+                  </p>
+                  <p className="text-sm text-neutral-500">
+                    {formatCurrency(item.price * item.quantity)}
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => updateQuantity(item.id, 0)}
+                  className="text-red-500"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="mt-2 flex items-center gap-2">
+                <button
+                  onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                  className="h-8 w-8 border rounded"
+                >
+                  -
+                </button>
+
+                <input
+                  className="h-8 w-12 border rounded text-center"
+                  type="number"
+                  value={item.quantity}
+                  onChange={(e) =>
+                    updateQuantity(item.id, Math.max(1, Number(e.target.value)))
+                  }
+                />
+
+                <button
+                  onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                  className="h-8 w-8 border rounded"
+                >
+                  +
+                </button>
+              </div>
+
+            </div>
+          ))}
+
+          <div className="border-t pt-4 space-y-2">
+            <p className="font-black text-lg">
+              Subtotal: {formatCurrency(total)}
+            </p>
+
+            {currentDiscount && (
+              <>
+                <p className="text-sm font-bold text-green-700">
+                  Descuento aplicado: {currentDiscount.percent}% OFF
+                </p>
+                <p className="text-sm text-green-700">
+                  Ahorrás {formatCurrency(discountAmount)}
+                </p>
+                <p className="font-black text-xl">
+                  Total final: {formatCurrency(finalTotal)}
+                </p>
+              </>
+            )}
+
+            {!currentDiscount && nextDiscount && total > 0 && (
+              <p className="text-sm font-semibold text-neutral-700">
+                Agregá {formatCurrency(nextDiscount.amount - total)} más y activás {nextDiscount.percent}% OFF.
+              </p>
+            )}
+
+            <a
+              className={`block mt-3 text-white text-center py-3 rounded-xl font-black ${
+                meetsMinimum ? 'bg-green-600' : 'bg-gray-400 cursor-not-allowed'
+              }`}
+              href={meetsMinimum ? whatsappHref : undefined}
+              onClick={(e) => {
+                if (!meetsMinimum) e.preventDefault();
+              }}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {meetsMinimum ? 'Confirmar pedido por WhatsApp' : 'Mínimo USD 300'}
+            </a>
+
+            {meetsMinimum && (
+              <p className="text-center text-xs text-neutral-500">
+                Al enviar el pedido coordinamos entrega, pago y disponibilidad final.
+              </p>
+            )}
+          </div>
+        </aside>
+      </div>
+
+      {/* 📱 BARRA FIJA MOBILE */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t bg-white p-3 shadow-[0_-4px_20px_rgba(0,0,0,0.12)] lg:hidden">
+        <div className="mb-2 flex items-center justify-between">
+          <div>
+            <p className="text-xs text-neutral-500">Pedido</p>
+            <p className="font-black">
+              {formatCurrency(currentDiscount ? finalTotal : total)}
+            </p>
+          </div>
+
+          <div className="text-right">
+            <p className="text-xs text-neutral-500">Unidades</p>
+            <p className="font-black">{totalUnits}</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
           <a
-            className={`block mt-3 text-white text-center py-3 rounded-xl font-black ${
-              meetsMinimum ? 'bg-green-600' : 'bg-gray-400 cursor-not-allowed'
-            }`}
-            href={meetsMinimum ? `https://wa.me/5491170612311?text=${buildWhatsAppText()}` : undefined}
-            onClick={(e) => {
-              if (!meetsMinimum) e.preventDefault();
-            }}
-            target="_blank"
-            rel="noopener noreferrer"
+            href="#pedido"
+            className="rounded-xl border border-black py-3 text-center text-sm font-black"
           >
-            {meetsMinimum ? 'Confirmar pedido por WhatsApp' : 'Mínimo USD 300'}
+            Ver pedido
           </a>
 
-          {meetsMinimum && (
-            <p className="text-center text-xs text-neutral-500">
-              Al enviar el pedido coordinamos entrega, pago y disponibilidad final.
-            </p>
-          )}
+          <a
+            href={meetsMinimum ? whatsappHref : '#pedido'}
+            onClick={(e) => {
+              if (!meetsMinimum) {
+                e.preventDefault();
+                document.getElementById('pedido')?.scrollIntoView({
+                  behavior: 'smooth',
+                  block: 'start'
+                });
+              }
+            }}
+            target={meetsMinimum ? '_blank' : undefined}
+            rel={meetsMinimum ? 'noopener noreferrer' : undefined}
+            className={`rounded-xl py-3 text-center text-sm font-black text-white ${
+              meetsMinimum ? 'bg-green-600' : 'bg-gray-400'
+            }`}
+          >
+            {meetsMinimum ? 'Enviar' : 'Falta mínimo'}
+          </a>
         </div>
-      </aside>
+      </div>
     </div>
   );
 }
