@@ -275,7 +275,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
             }}
             target="_blank"
           >
-            {meetsMinimum ? 'Enviar pedido' : 'Mínimo USD 300'}
+            {meetsMinimum ? 'Enviar pedido por WhatsApp' : 'Mínimo USD 300'}
           </a>
         </div>
       </aside>
