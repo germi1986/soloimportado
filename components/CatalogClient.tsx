@@ -28,15 +28,11 @@ export default function CatalogClient({ products }: { products: Product[] }) {
   const [selectedCategory, setSelectedCategory] = useState('all');
 
   const brands = useMemo(() => {
-    return Array.from(
-      new Set(products.map((p) => p.brand).filter(Boolean))
-    ).sort();
+    return Array.from(new Set(products.map((p) => p.brand).filter(Boolean))).sort();
   }, [products]);
 
   const categories = useMemo(() => {
-    return Array.from(
-      new Set(products.map((p) => p.category).filter(Boolean))
-    ).sort();
+    return Array.from(new Set(products.map((p) => p.category).filter(Boolean))).sort();
   }, [products]);
 
   const filteredProducts = useMemo(() => {
@@ -89,6 +85,11 @@ export default function CatalogClient({ products }: { products: Product[] }) {
     return cart.find((item) => item.id === productId)?.quantity || 0;
   }
 
+  function flashAdded(productName: string) {
+    setLastAdded(productName);
+    setTimeout(() => setLastAdded(''), 1800);
+  }
+
   function addToCart(product: Product) {
     const qty = Math.max(1, quantities[product.id] || 1);
 
@@ -106,11 +107,10 @@ export default function CatalogClient({ products }: { products: Product[] }) {
       return [...currentCart, { ...product, quantity: qty }];
     });
 
-    setLastAdded(product.name);
-    setTimeout(() => setLastAdded(''), 1800);
+    flashAdded(product.name);
   }
 
-  function addOneQuick(product: Product) {
+  function handleIncrease(product: Product) {
     setCart((currentCart) => {
       const existing = currentCart.find((item) => item.id === product.id);
 
@@ -125,8 +125,25 @@ export default function CatalogClient({ products }: { products: Product[] }) {
       return [...currentCart, { ...product, quantity: 1 }];
     });
 
-    setLastAdded(product.name);
-    setTimeout(() => setLastAdded(''), 1800);
+    flashAdded(product.name);
+  }
+
+  function handleDecrease(product: Product) {
+    setCart((currentCart) => {
+      const existing = currentCart.find((item) => item.id === product.id);
+
+      if (!existing) return currentCart;
+
+      if (existing.quantity <= 1) {
+        return currentCart.filter((item) => item.id !== product.id);
+      }
+
+      return currentCart.map((item) =>
+        item.id === product.id
+          ? { ...item, quantity: item.quantity - 1 }
+          : item
+      );
+    });
   }
 
   function updateQuantity(productId: string, quantity: number) {
@@ -385,13 +402,10 @@ export default function CatalogClient({ products }: { products: Product[] }) {
 
                       <div className="flex flex-wrap items-center gap-2">
                         <button
-                          onClick={() =>
-                            changeProductQuantity(
-                              product.id,
-                              (quantities[product.id] || 1) - 1
-                            )
-                          }
-                          className="h-8 w-8 rounded border"
+                          onClick={() => handleDecrease(product)}
+                          className={`h-8 w-8 rounded border ${
+                            isInCart ? 'border-green-600 text-green-700' : ''
+                          }`}
                         >
                           -
                         </button>
@@ -399,19 +413,19 @@ export default function CatalogClient({ products }: { products: Product[] }) {
                         <input
                           type="number"
                           className="w-12 rounded border text-center"
-                          value={quantities[product.id] || 1}
-                          onChange={(e) =>
-                            changeProductQuantity(product.id, Number(e.target.value))
-                          }
+                          value={isInCart ? cartQty : quantities[product.id] || 1}
+                          onChange={(e) => {
+                            const value = Math.max(1, Number(e.target.value));
+                            if (isInCart) {
+                              updateQuantity(product.id, value);
+                            } else {
+                              changeProductQuantity(product.id, value);
+                            }
+                          }}
                         />
 
                         <button
-                          onClick={() =>
-                            changeProductQuantity(
-                              product.id,
-                              (quantities[product.id] || 1) + 1
-                            )
-                          }
+                          onClick={() => handleIncrease(product)}
                           className="h-8 w-8 rounded border"
                         >
                           +
@@ -423,14 +437,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
                             isInCart ? 'bg-green-700' : 'bg-black'
                           }`}
                         >
-                          {isInCart ? 'Sumar más' : 'Agregar'}
-                        </button>
-
-                        <button
-                          onClick={() => addOneQuick(product)}
-                          className="rounded border border-black px-3 py-2 text-sm font-bold"
-                        >
-                          +1 rápido
+                          {isInCart ? 'Sumar cantidad' : 'Agregar'}
                         </button>
                       </div>
                     </div>
@@ -442,7 +449,6 @@ export default function CatalogClient({ products }: { products: Product[] }) {
 
           {viewMode === 'list' && (
             <div className="rounded-2xl bg-white shadow-sm">
-
               <div className="hidden overflow-x-auto md:block">
                 <table className="w-full text-sm">
                   <thead className="bg-neutral-100 text-left text-xs uppercase text-neutral-500">
@@ -467,9 +473,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
                       return (
                         <tr
                           key={product.id}
-                          className={`border-t ${
-                            isInCart ? 'bg-green-50' : ''
-                          }`}
+                          className={`border-t ${isInCart ? 'bg-green-50' : ''}`}
                         >
                           <td className="p-3">
                             <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-neutral-100">
@@ -499,22 +503,17 @@ export default function CatalogClient({ products }: { products: Product[] }) {
                                 En pedido: {cartQty}
                               </span>
                             ) : (
-                              <span className="text-xs text-neutral-400">
-                                —
-                              </span>
+                              <span className="text-xs text-neutral-400">—</span>
                             )}
                           </td>
 
                           <td className="p-3">
                             <div className="flex items-center gap-2">
                               <button
-                                onClick={() =>
-                                  changeProductQuantity(
-                                    product.id,
-                                    (quantities[product.id] || 1) - 1
-                                  )
-                                }
-                                className="h-8 w-8 rounded border"
+                                onClick={() => handleDecrease(product)}
+                                className={`h-8 w-8 rounded border ${
+                                  isInCart ? 'border-green-600 text-green-700' : ''
+                                }`}
                               >
                                 -
                               </button>
@@ -522,19 +521,19 @@ export default function CatalogClient({ products }: { products: Product[] }) {
                               <input
                                 type="number"
                                 className="h-8 w-12 rounded border text-center"
-                                value={quantities[product.id] || 1}
-                                onChange={(e) =>
-                                  changeProductQuantity(product.id, Number(e.target.value))
-                                }
+                                value={isInCart ? cartQty : quantities[product.id] || 1}
+                                onChange={(e) => {
+                                  const value = Math.max(1, Number(e.target.value));
+                                  if (isInCart) {
+                                    updateQuantity(product.id, value);
+                                  } else {
+                                    changeProductQuantity(product.id, value);
+                                  }
+                                }}
                               />
 
                               <button
-                                onClick={() =>
-                                  changeProductQuantity(
-                                    product.id,
-                                    (quantities[product.id] || 1) + 1
-                                  )
-                                }
+                                onClick={() => handleIncrease(product)}
                                 className="h-8 w-8 rounded border"
                               >
                                 +
@@ -611,13 +610,10 @@ export default function CatalogClient({ products }: { products: Product[] }) {
 
                       <div className="mt-3 flex items-center gap-2">
                         <button
-                          onClick={() =>
-                            changeProductQuantity(
-                              product.id,
-                              (quantities[product.id] || 1) - 1
-                            )
-                          }
-                          className="h-9 w-9 rounded border"
+                          onClick={() => handleDecrease(product)}
+                          className={`h-9 w-9 rounded border ${
+                            isInCart ? 'border-green-600 text-green-700' : ''
+                          }`}
                         >
                           -
                         </button>
@@ -625,19 +621,19 @@ export default function CatalogClient({ products }: { products: Product[] }) {
                         <input
                           type="number"
                           className="h-9 w-14 rounded border text-center"
-                          value={quantities[product.id] || 1}
-                          onChange={(e) =>
-                            changeProductQuantity(product.id, Number(e.target.value))
-                          }
+                          value={isInCart ? cartQty : quantities[product.id] || 1}
+                          onChange={(e) => {
+                            const value = Math.max(1, Number(e.target.value));
+                            if (isInCart) {
+                              updateQuantity(product.id, value);
+                            } else {
+                              changeProductQuantity(product.id, value);
+                            }
+                          }}
                         />
 
                         <button
-                          onClick={() =>
-                            changeProductQuantity(
-                              product.id,
-                              (quantities[product.id] || 1) + 1
-                            )
-                          }
+                          onClick={() => handleIncrease(product)}
                           className="h-9 w-9 rounded border"
                         >
                           +
@@ -689,7 +685,6 @@ export default function CatalogClient({ products }: { products: Product[] }) {
 
           {cart.map((item) => (
             <div key={item.id} className="mb-3 rounded border p-3">
-
               <div className="flex justify-between gap-3">
                 <div>
                   <p className="font-semibold">
@@ -733,7 +728,6 @@ export default function CatalogClient({ products }: { products: Product[] }) {
                   +
                 </button>
               </div>
-
             </div>
           ))}
 
