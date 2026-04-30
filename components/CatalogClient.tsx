@@ -23,19 +23,43 @@ export default function CatalogClient({ products }: { products: Product[] }) {
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [lastAdded, setLastAdded] = useState('');
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_PRODUCTS);
+  const [viewMode, setViewMode] = useState<'catalog' | 'list'>('catalog');
+  const [selectedBrand, setSelectedBrand] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+
+  const brands = useMemo(() => {
+    return Array.from(
+      new Set(products.map((p) => p.brand).filter(Boolean))
+    ).sort();
+  }, [products]);
+
+  const categories = useMemo(() => {
+    return Array.from(
+      new Set(products.map((p) => p.category).filter(Boolean))
+    ).sort();
+  }, [products]);
 
   const filteredProducts = useMemo(() => {
     const normalizedQuery = query.toLowerCase().trim();
-    if (!normalizedQuery) return products;
 
-    return products.filter((product) =>
-      [product.name, product.brand, product.category, product.sku]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-        .includes(normalizedQuery)
-    );
-  }, [products, query]);
+    return products.filter((product) => {
+      const matchesQuery =
+        !normalizedQuery ||
+        [product.name, product.brand, product.category, product.sku]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+          .includes(normalizedQuery);
+
+      const matchesBrand =
+        selectedBrand === 'all' || product.brand === selectedBrand;
+
+      const matchesCategory =
+        selectedCategory === 'all' || product.category === selectedCategory;
+
+      return matchesQuery && matchesBrand && matchesCategory;
+    });
+  }, [products, query, selectedBrand, selectedCategory]);
 
   const visibleProducts = filteredProducts.slice(0, visibleCount);
   const hasMoreProducts = visibleCount < filteredProducts.length;
@@ -56,6 +80,10 @@ export default function CatalogClient({ products }: { products: Product[] }) {
     : 0;
 
   const finalTotal = total - discountAmount;
+
+  function resetVisibleProducts() {
+    setVisibleCount(INITIAL_VISIBLE_PRODUCTS);
+  }
 
   function addToCart(product: Product) {
     const qty = Math.max(1, quantities[product.id] || 1);
@@ -110,6 +138,13 @@ export default function CatalogClient({ products }: { products: Product[] }) {
     );
   }
 
+  function changeProductQuantity(productId: string, quantity: number) {
+    setQuantities((q) => ({
+      ...q,
+      [productId]: Math.max(1, quantity)
+    }));
+  }
+
   function buildWhatsAppText() {
     const lines = cart.map((item) => {
       const size = item.category ? ` (${item.category})` : '';
@@ -136,7 +171,6 @@ export default function CatalogClient({ products }: { products: Product[] }) {
   return (
     <div id="top" className="relative pb-28 lg:pb-0">
 
-      {/* BOTÓN VOLVER ARRIBA - SEGURO PARA VERCEL */}
       <a
         href="#top"
         className="fixed bottom-24 right-4 z-50 rounded-full bg-black px-4 py-3 text-white shadow-lg lg:bottom-6"
@@ -153,18 +187,80 @@ export default function CatalogClient({ products }: { products: Product[] }) {
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <section>
 
+          {/* CONTROLES SUPERIORES */}
           <div className="mb-5 rounded-2xl bg-white p-4 shadow-sm">
-            <input
-              className="w-full rounded-xl border border-neutral-300 px-4 py-3 outline-none focus:border-black"
-              placeholder="Buscar por producto, marca o tamaño..."
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setVisibleCount(INITIAL_VISIBLE_PRODUCTS);
-              }}
-            />
+            <div className="mb-4 grid gap-3 md:grid-cols-[1fr_auto]">
+              <input
+                className="w-full rounded-xl border border-neutral-300 px-4 py-3 outline-none focus:border-black"
+                placeholder="Buscar por producto, marca o tamaño..."
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  resetVisibleProducts();
+                }}
+              />
+
+              <div className="grid grid-cols-2 rounded-xl border border-neutral-300 p-1">
+                <button
+                  onClick={() => setViewMode('catalog')}
+                  className={`rounded-lg px-4 py-2 text-sm font-black ${
+                    viewMode === 'catalog'
+                      ? 'bg-black text-white'
+                      : 'bg-white text-black'
+                  }`}
+                >
+                  Catálogo
+                </button>
+
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`rounded-lg px-4 py-2 text-sm font-black ${
+                    viewMode === 'list'
+                      ? 'bg-black text-white'
+                      : 'bg-white text-black'
+                  }`}
+                >
+                  Lista
+                </button>
+              </div>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <select
+                className="rounded-xl border border-neutral-300 px-4 py-3 outline-none focus:border-black"
+                value={selectedBrand}
+                onChange={(e) => {
+                  setSelectedBrand(e.target.value);
+                  resetVisibleProducts();
+                }}
+              >
+                <option value="all">Todas las marcas</option>
+                {brands.map((brand) => (
+                  <option key={brand} value={brand}>
+                    {brand}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                className="rounded-xl border border-neutral-300 px-4 py-3 outline-none focus:border-black"
+                value={selectedCategory}
+                onChange={(e) => {
+                  setSelectedCategory(e.target.value);
+                  resetVisibleProducts();
+                }}
+              >
+                <option value="all">Todas las categorías</option>
+                {categories.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
+          {/* MÍNIMO */}
           <div className="mb-5 rounded-2xl border border-yellow-300 bg-yellow-100 p-4">
             <p className="text-center font-bold text-yellow-800">
               Compra mínima: USD 300
@@ -184,6 +280,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
             </p>
           </div>
 
+          {/* DESCUENTOS */}
           <div className="mb-5 rounded-2xl bg-white p-4 shadow-sm">
             <p className="font-black">Descuentos por volumen</p>
 
@@ -210,6 +307,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
             </p>
           </div>
 
+          {/* CONDICIONES */}
           <details className="mb-5 rounded-2xl bg-white p-4 shadow-sm">
             <summary className="cursor-pointer font-black">
               Condiciones de compra
@@ -228,103 +326,279 @@ export default function CatalogClient({ products }: { products: Product[] }) {
             Mostrando {visibleProducts.length} de {filteredProducts.length} productos
           </p>
 
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {visibleProducts.map((product) => (
-              <article key={product.id} className="overflow-hidden rounded-2xl bg-white shadow-sm">
+          {/* VISTA CATÁLOGO */}
+          {viewMode === 'catalog' && (
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {visibleProducts.map((product) => (
+                <article key={product.id} className="overflow-hidden rounded-2xl bg-white shadow-sm">
 
-                <div className="flex aspect-[4/3] items-center justify-center bg-neutral-100">
-                  {product.imageUrl ? (
-                    <img
-                      className="h-full w-full object-contain p-3"
-                      src={product.imageUrl}
-                      alt={product.name}
-                      loading="lazy"
-                      decoding="async"
-                    />
-                  ) : (
-                    <span className="text-sm text-neutral-400">Sin imagen</span>
-                  )}
-                </div>
-
-                <div className="space-y-3 p-4">
-                  <div>
-                    <p className="text-xs uppercase text-neutral-500">
-                      {product.brand}
-                    </p>
-
-                    <h2 className="text-lg font-bold">{product.name}</h2>
-
-                    {product.category && (
-                      <p className="text-sm text-neutral-600">
-                        {product.category}
-                      </p>
+                  <div className="flex aspect-[4/3] items-center justify-center bg-neutral-100">
+                    {product.imageUrl ? (
+                      <img
+                        className="h-full w-full object-contain p-3"
+                        src={product.imageUrl}
+                        alt={product.name}
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    ) : (
+                      <span className="text-sm text-neutral-400">Sin imagen</span>
                     )}
                   </div>
 
-                  <div>
-                    <p className="text-xl font-black">
-                      {formatCurrency(product.price)}
-                    </p>
-                    <p className="text-xs text-neutral-500">
-                      Stock: {product.stock}
-                    </p>
+                  <div className="space-y-3 p-4">
+                    <div>
+                      <p className="text-xs uppercase text-neutral-500">
+                        {product.brand}
+                      </p>
+
+                      <h2 className="text-lg font-bold">{product.name}</h2>
+
+                      {product.category && (
+                        <p className="text-sm text-neutral-600">
+                          {product.category}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <p className="text-xl font-black">
+                        {formatCurrency(product.price)}
+                      </p>
+                      <p className="text-xs text-neutral-500">
+                        Stock: {product.stock}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        onClick={() =>
+                          changeProductQuantity(
+                            product.id,
+                            (quantities[product.id] || 1) - 1
+                          )
+                        }
+                        className="h-8 w-8 rounded border"
+                      >
+                        -
+                      </button>
+
+                      <input
+                        type="number"
+                        className="w-12 rounded border text-center"
+                        value={quantities[product.id] || 1}
+                        onChange={(e) =>
+                          changeProductQuantity(product.id, Number(e.target.value))
+                        }
+                      />
+
+                      <button
+                        onClick={() =>
+                          changeProductQuantity(
+                            product.id,
+                            (quantities[product.id] || 1) + 1
+                          )
+                        }
+                        className="h-8 w-8 rounded border"
+                      >
+                        +
+                      </button>
+
+                      <button
+                        onClick={() => addToCart(product)}
+                        className="rounded bg-black px-3 py-2 text-white"
+                      >
+                        Agregar
+                      </button>
+
+                      <button
+                        onClick={() => addOneQuick(product)}
+                        className="rounded border border-black px-3 py-2 text-sm font-bold"
+                      >
+                        +1 rápido
+                      </button>
+                    </div>
                   </div>
+                </article>
+              ))}
+            </div>
+          )}
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      onClick={() =>
-                        setQuantities((q) => ({
-                          ...q,
-                          [product.id]: Math.max(1, (q[product.id] || 1) - 1)
-                        }))
-                      }
-                      className="h-8 w-8 rounded border"
-                    >
-                      -
-                    </button>
+          {/* VISTA LISTA MAYORISTA */}
+          {viewMode === 'list' && (
+            <div className="rounded-2xl bg-white shadow-sm">
 
-                    <input
-                      type="number"
-                      className="w-12 rounded border text-center"
-                      value={quantities[product.id] || 1}
-                      onChange={(e) =>
-                        setQuantities((q) => ({
-                          ...q,
-                          [product.id]: Math.max(1, Number(e.target.value))
-                        }))
-                      }
-                    />
+              {/* DESKTOP */}
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full text-sm">
+                  <thead className="bg-neutral-100 text-left text-xs uppercase text-neutral-500">
+                    <tr>
+                      <th className="p-3">Img</th>
+                      <th className="p-3">Producto</th>
+                      <th className="p-3">Marca</th>
+                      <th className="p-3">Categoría</th>
+                      <th className="p-3">Precio</th>
+                      <th className="p-3">Stock</th>
+                      <th className="p-3">Cantidad</th>
+                      <th className="p-3">Agregar</th>
+                    </tr>
+                  </thead>
 
-                    <button
-                      onClick={() =>
-                        setQuantities((q) => ({
-                          ...q,
-                          [product.id]: (q[product.id] || 1) + 1
-                        }))
-                      }
-                      className="h-8 w-8 rounded border"
-                    >
-                      +
-                    </button>
+                  <tbody>
+                    {visibleProducts.map((product) => (
+                      <tr key={product.id} className="border-t">
+                        <td className="p-3">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-neutral-100">
+                            {product.imageUrl ? (
+                              <img
+                                src={product.imageUrl}
+                                alt={product.name}
+                                className="h-full w-full object-contain p-1"
+                                loading="lazy"
+                                decoding="async"
+                              />
+                            ) : (
+                              <span className="text-xs text-neutral-400">—</span>
+                            )}
+                          </div>
+                        </td>
 
-                    <button
-                      onClick={() => addToCart(product)}
-                      className="rounded bg-black px-3 py-2 text-white"
-                    >
-                      Agregar
-                    </button>
+                        <td className="p-3 font-bold">{product.name}</td>
+                        <td className="p-3">{product.brand}</td>
+                        <td className="p-3">{product.category}</td>
+                        <td className="p-3 font-black">{formatCurrency(product.price)}</td>
+                        <td className="p-3">{product.stock}</td>
 
-                    <button
-                      onClick={() => addOneQuick(product)}
-                      className="rounded border border-black px-3 py-2 text-sm font-bold"
-                    >
-                      +1 rápido
-                    </button>
+                        <td className="p-3">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() =>
+                                changeProductQuantity(
+                                  product.id,
+                                  (quantities[product.id] || 1) - 1
+                                )
+                              }
+                              className="h-8 w-8 rounded border"
+                            >
+                              -
+                            </button>
+
+                            <input
+                              type="number"
+                              className="h-8 w-12 rounded border text-center"
+                              value={quantities[product.id] || 1}
+                              onChange={(e) =>
+                                changeProductQuantity(product.id, Number(e.target.value))
+                              }
+                            />
+
+                            <button
+                              onClick={() =>
+                                changeProductQuantity(
+                                  product.id,
+                                  (quantities[product.id] || 1) + 1
+                                )
+                              }
+                              className="h-8 w-8 rounded border"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </td>
+
+                        <td className="p-3">
+                          <button
+                            onClick={() => addToCart(product)}
+                            className="rounded-lg bg-black px-3 py-2 font-bold text-white"
+                          >
+                            Agregar
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* MOBILE */}
+              <div className="grid gap-3 p-3 md:hidden">
+                {visibleProducts.map((product) => (
+                  <div key={product.id} className="rounded-xl border p-3">
+                    <div className="flex gap-3">
+                      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-neutral-100">
+                        {product.imageUrl ? (
+                          <img
+                            src={product.imageUrl}
+                            alt={product.name}
+                            className="h-full w-full object-contain p-1"
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        ) : (
+                          <span className="text-xs text-neutral-400">Sin img</span>
+                        )}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs uppercase text-neutral-500">
+                          {product.brand}
+                        </p>
+                        <h3 className="font-bold leading-tight">{product.name}</h3>
+                        <p className="text-sm text-neutral-600">{product.category}</p>
+
+                        <div className="mt-1 flex justify-between gap-3">
+                          <p className="font-black">{formatCurrency(product.price)}</p>
+                          <p className="text-xs text-neutral-500">Stock: {product.stock}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex items-center gap-2">
+                      <button
+                        onClick={() =>
+                          changeProductQuantity(
+                            product.id,
+                            (quantities[product.id] || 1) - 1
+                          )
+                        }
+                        className="h-9 w-9 rounded border"
+                      >
+                        -
+                      </button>
+
+                      <input
+                        type="number"
+                        className="h-9 w-14 rounded border text-center"
+                        value={quantities[product.id] || 1}
+                        onChange={(e) =>
+                          changeProductQuantity(product.id, Number(e.target.value))
+                        }
+                      />
+
+                      <button
+                        onClick={() =>
+                          changeProductQuantity(
+                            product.id,
+                            (quantities[product.id] || 1) + 1
+                          )
+                        }
+                        className="h-9 w-9 rounded border"
+                      >
+                        +
+                      </button>
+
+                      <button
+                        onClick={() => addToCart(product)}
+                        className="ml-auto rounded-lg bg-black px-4 py-2 font-bold text-white"
+                      >
+                        Agregar
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </article>
-            ))}
-          </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {hasMoreProducts && (
             <div className="mt-6 text-center">
@@ -338,6 +612,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
           )}
         </section>
 
+        {/* CARRITO */}
         <aside id="pedido" className="h-fit rounded-2xl bg-white p-5 shadow-sm lg:sticky lg:top-4">
           <h2 className="mb-2 text-xl font-black">Pedido</h2>
           <p className="mb-4 text-sm">{totalUnits} unidades</p>
@@ -452,6 +727,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
         </aside>
       </div>
 
+      {/* BARRA MOBILE */}
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t bg-white p-3 shadow-[0_-4px_20px_rgba(0,0,0,0.12)] lg:hidden">
         <div className="mb-2 flex items-center justify-between">
           <div>
