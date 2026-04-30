@@ -4,11 +4,7 @@ import { useMemo, useState } from 'react';
 import type { CartItem, Product } from '@/lib/types';
 
 function formatCurrency(value: number) {
-  return new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-    maximumFractionDigits: 0
-  }).format(value);
+  return `USD ${value.toFixed(2)}`;
 }
 
 export default function CatalogClient({ products }: { products: Product[] }) {
