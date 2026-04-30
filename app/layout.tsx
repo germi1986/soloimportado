@@ -1,15 +1,26 @@
-import type { Metadata } from 'next';
-import './globals.css';
+import './globals.css'
+import type { Metadata, Viewport } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Solo Importado Mayorista',
-  description: 'Portal mayorista privado'
-};
+  title: 'Solo Importado',
+  description: 'Catálogo',
+}
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+}
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   return (
     <html lang="es">
       <body>{children}</body>
     </html>
-  );
+  )
 }
