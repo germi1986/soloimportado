@@ -16,13 +16,13 @@ export default function CatalogClient({ products }: { products: Product[] }) {
     const normalizedQuery = query.toLowerCase().trim();
     if (!normalizedQuery) return products;
 
-    return products.filter((product) => {
-      return [product.name, product.brand, product.category, product.sku]
+    return products.filter((product) =>
+      [product.name, product.brand, product.category, product.sku]
         .filter(Boolean)
         .join(' ')
         .toLowerCase()
-        .includes(normalizedQuery);
-    });
+        .includes(normalizedQuery)
+    );
   }, [products, query]);
 
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -48,19 +48,21 @@ export default function CatalogClient({ products }: { products: Product[] }) {
 
   function updateQuantity(productId: string, quantity: number) {
     if (quantity <= 0) {
-      setCart((currentCart) => currentCart.filter((item) => item.id !== productId));
+      setCart((c) => c.filter((item) => item.id !== productId));
       return;
     }
 
-    setCart((currentCart) =>
-      currentCart.map((item) => (item.id === productId ? { ...item, quantity } : item))
+    setCart((c) =>
+      c.map((item) =>
+        item.id === productId ? { ...item, quantity } : item
+      )
     );
   }
 
   function buildWhatsAppText() {
     const lines = cart.map((item) => {
-      const sizeText = item.category ? ` ${item.category}` : '';
-      return `• ${item.quantity} x ${item.name}${sizeText} - ${formatCurrency(item.price * item.quantity)}`;
+      const size = item.category ? ` (${item.category})` : '';
+      return `• ${item.quantity} x ${item.name}${size} - ${formatCurrency(item.price * item.quantity)}`;
     });
 
     return encodeURIComponent(
@@ -71,111 +73,117 @@ export default function CatalogClient({ products }: { products: Product[] }) {
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
       <section>
+
+        {/* 🔍 BUSCADOR */}
         <div className="mb-5 rounded-2xl bg-white p-4 shadow-sm">
           <input
             className="w-full rounded-xl border border-neutral-300 px-4 py-3 outline-none focus:border-black"
-            placeholder="Buscar por producto, marca, tamaño o SKU..."
+            placeholder="Buscar por producto, marca o tamaño..."
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(e) => setQuery(e.target.value)}
           />
         </div>
 
+        {/* 📄 CONDICIONES */}
         <details className="mb-5 rounded-2xl bg-white p-4 shadow-sm">
-          <summary className="cursor-pointer select-none text-base font-black">
+          <summary className="cursor-pointer font-black">
             Condiciones de compra
           </summary>
 
-          <div className="mt-4 space-y-4 text-sm text-neutral-700">
-            <p>Condiciones ya configuradas...</p>
+          <div className="mt-4 space-y-3 text-sm text-neutral-700">
+            <p><strong>Pagos:</strong> Efectivo (CABA/GBA), Transferencia (+5%), USDT sin recargo.</p>
+            <p><strong>Envíos:</strong> Gratis CABA/GBA. Interior a coordinar.</p>
+            <p><strong>Descuentos:</strong> desde USD 500 (5%) hasta USD 2000 (12%).</p>
+            <p><strong>Entrega:</strong> hasta 3 días hábiles. Stock sujeto a disponibilidad.</p>
+            <p><strong>Garantía:</strong> solo productos en mal estado o abiertos.</p>
           </div>
         </details>
 
+        {/* 🧱 PRODUCTOS */}
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {filteredProducts.map((product) => (
-            <article key={product.id} className="overflow-hidden rounded-2xl bg-white shadow-sm">
+            <article key={product.id} className="rounded-2xl bg-white shadow-sm overflow-hidden">
+
+              {/* IMAGEN */}
               <div className="flex aspect-[4/3] items-center justify-center bg-neutral-100">
                 {product.imageUrl ? (
                   <img
                     className="h-full w-full object-contain p-3"
-                    src={product.imageUrl?.replace(/^"|"$/g, '').trim()}
+                    src={product.imageUrl}
                     alt={product.name}
-                    onError={(event) => {
-                      event.currentTarget.style.display = 'none';
-                    }}
                   />
                 ) : (
                   <span className="text-sm text-neutral-400">Sin imagen</span>
                 )}
               </div>
 
-              <div className="space-y-3 p-4">
+              {/* INFO */}
+              <div className="p-4 space-y-3">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                    {product.brand || 'Producto'}
+                  <p className="text-xs text-neutral-500 uppercase">
+                    {product.brand}
                   </p>
 
-                  <h2 className="text-lg font-bold">{product.name}</h2>
+                  <h2 className="font-bold text-lg">{product.name}</h2>
 
                   {product.category && (
-                    <p className="mt-1 text-sm font-semibold text-neutral-600">
-                      Tamaño: {product.category}
+                    <p className="text-sm text-neutral-600">
+                      {product.category}
                     </p>
                   )}
                 </div>
 
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex justify-between items-center">
                   <div>
-                    <p className="text-xl font-black">{formatCurrency(product.price)}</p>
-                    {typeof product.stock === 'number' && (
-                      <p className="text-xs text-neutral-500">Stock: {product.stock}</p>
-                    )}
+                    <p className="text-xl font-black">
+                      {formatCurrency(product.price)}
+                    </p>
+                    <p className="text-xs text-neutral-500">
+                      Stock: {product.stock}
+                    </p>
                   </div>
 
-                  {/* 🔥 NUEVO BLOQUE DE CANTIDAD */}
+                  {/* 🔢 CANTIDAD */}
                   <div className="flex items-center gap-2">
                     <button
-                      className="h-8 w-8 rounded-lg border"
                       onClick={() =>
                         setQuantities((q) => ({
                           ...q,
                           [product.id]: Math.max(1, (q[product.id] || 1) - 1)
                         }))
                       }
-                      type="button"
+                      className="h-8 w-8 border rounded"
                     >
                       -
                     </button>
 
                     <input
-                      className="h-8 w-12 rounded-lg border text-center"
                       type="number"
-                      min={1}
+                      className="w-10 text-center border rounded"
                       value={quantities[product.id] || 1}
                       onChange={(e) =>
                         setQuantities((q) => ({
                           ...q,
-                          [product.id]: Math.max(1, Number(e.target.value))
+                          [product.id]: Number(e.target.value)
                         }))
                       }
                     />
 
                     <button
-                      className="h-8 w-8 rounded-lg border"
                       onClick={() =>
                         setQuantities((q) => ({
                           ...q,
                           [product.id]: (q[product.id] || 1) + 1
                         }))
                       }
-                      type="button"
+                      className="h-8 w-8 border rounded"
                     >
                       +
                     </button>
 
                     <button
-                      className="ml-2 rounded-xl bg-black px-4 py-2 text-sm font-semibold text-white"
                       onClick={() => addToCart(product)}
-                      type="button"
+                      className="ml-2 bg-black text-white px-3 py-2 rounded"
                     >
                       Agregar
                     </button>
@@ -187,51 +195,31 @@ export default function CatalogClient({ products }: { products: Product[] }) {
         </div>
       </section>
 
-      <aside className="h-fit rounded-2xl bg-white p-5 shadow-sm lg:sticky lg:top-6">
-        <h2 className="mb-1 text-xl font-black">Pedido</h2>
-        <p className="mb-4 text-sm text-neutral-600">{totalUnits} unidades seleccionadas</p>
+      {/* 🛒 CARRITO */}
+      <aside className="bg-white p-5 rounded-2xl shadow-sm">
+        <h2 className="font-black text-xl mb-2">Pedido</h2>
+        <p className="text-sm mb-4">{totalUnits} unidades</p>
 
-        {cart.length === 0 ? (
-          <p className="rounded-xl bg-neutral-100 p-4 text-sm text-neutral-600">
-            Todavía no agregaste productos.
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {cart.map((item) => (
-              <div key={item.id} className="rounded-xl border border-neutral-200 p-3">
-                <div className="mb-2 flex justify-between gap-3">
-                  <p className="font-semibold">{item.name}</p>
-                  <p className="font-bold">{formatCurrency(item.price * item.quantity)}</p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button onClick={() => updateQuantity(item.id, item.quantity - 1)}>-</button>
-                  <input
-                    type="number"
-                    value={item.quantity}
-                    onChange={(e) => updateQuantity(item.id, Number(e.target.value))}
-                  />
-                  <button onClick={() => updateQuantity(item.id, item.quantity + 1)}>+</button>
-                </div>
-              </div>
-            ))}
-
-            <div className="border-t pt-4">
-              <div className="mb-4 flex justify-between text-lg font-black">
-                <span>Total</span>
-                <span>{formatCurrency(total)}</span>
-              </div>
-
-              <a
-                className="block rounded-xl bg-green-600 px-4 py-3 text-center font-bold text-white"
-                href={`https://wa.me/?text=${buildWhatsAppText()}`}
-                target="_blank"
-              >
-                Enviar pedido por WhatsApp
-              </a>
-            </div>
+        {cart.map((item) => (
+          <div key={item.id} className="mb-3 border p-3 rounded">
+            <p>{item.name} ({item.category})</p>
+            <p>{formatCurrency(item.price * item.quantity)}</p>
           </div>
-        )}
+        ))}
+
+        <div className="border-t pt-4">
+          <p className="font-black text-lg">
+            Total: {formatCurrency(total)}
+          </p>
+
+          <a
+            className="block mt-3 bg-green-600 text-white text-center py-2 rounded"
+            href={`https://wa.me/?text=${buildWhatsAppText()}`}
+            target="_blank"
+          >
+            Enviar pedido
+          </a>
+        </div>
       </aside>
     </div>
   );
