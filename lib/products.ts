@@ -118,6 +118,7 @@ export async function getProducts(): Promise<Product[]> {
 
       // Ahora "Categoría" se alimenta desde la columna Género/Genero.
       category: normalizeGender(getCell(r, headers, ['Genero', 'Género'])),
+      description: getCell(r, headers, ['Tamaño', 'Categoria', 'Categoría']),
 
       price: num(r[3]),
       stock: Math.floor(Math.random() * 20) + 5,
