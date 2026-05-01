@@ -18,7 +18,7 @@ function formatCurrency(value: number) {
 }
 
 function productMeta(product: Product) {
-  return [product.category, product.description].filter(Boolean).join(' · ');
+  return [product.category, product.description].filter((value): value is string => Boolean(value)).join(' · ');
 }
 
 export default function CatalogClient({ products }: { products: Product[] }) {
@@ -39,7 +39,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
     return (
       !normalizedQuery ||
       [product.name, product.brand, product.category, product.description, product.sku]
-        .filter(Boolean)
+        .filter((value): value is string => Boolean(value))
         .join(' ')
         .toLowerCase()
         .includes(normalizedQuery)
@@ -75,7 +75,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
             return matchesSearch(product) && matchesCategory && matchesSize;
           })
           .map((p) => p.brand)
-          .filter(Boolean)
+          .filter((value): value is string => Boolean(value))
       )
     ).sort();
   }, [products, normalizedQuery, selectedCategory, selectedSize]);
@@ -94,7 +94,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
             return matchesSearch(product) && matchesBrand && matchesSize;
           })
           .map((p) => p.category)
-          .filter(Boolean)
+          .filter((value): value is string => Boolean(value))
       )
     );
 
@@ -115,7 +115,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
             return matchesSearch(product) && matchesBrand && matchesCategory;
           })
           .map((p) => p.description)
-          .filter(Boolean)
+          .filter((value): value is string => Boolean(value))
       )
     ).sort();
   }, [products, normalizedQuery, selectedBrand, selectedCategory]);
