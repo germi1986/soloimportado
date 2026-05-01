@@ -122,7 +122,7 @@ export async function getProducts(): Promise<Product[]> {
       price: num(r[3]),
       stock: Math.floor(Math.random() * 20) + 5,
       sku: undefined,
-      description: undefined,
+      description: getCell(r, headers, ['Tamaño', 'Categoria', 'Categoría']),
       imageUrl: getCell(r, headers, ['Imagen', 'URL Imagen', 'URLImagen'])
     }));
 }
