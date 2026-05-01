@@ -93,7 +93,7 @@ export async function getProducts(): Promise<Product[]> {
       id: String(i + 1),
       brand: getCell(r, headers, ['Marca']),
       name: getCell(r, headers, ['Producto']),
-      category: getCell(r, headers, ['Tamaño', 'Categoria', 'Categoría']),
+      category: normalizeGender(row[15] ?? ''),
       price: num(r[3]),
       stock: Math.floor(Math.random() * 20) + 5,
       sku: undefined,
