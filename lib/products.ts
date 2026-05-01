@@ -18,6 +18,28 @@ function clean(value: string) {
     .trim();
 }
 
+function normalizeGender(value: string) {
+  const gender = clean(value)
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+
+  if (['hombre', 'masculino', 'male', 'men', 'man'].includes(gender)) {
+    return 'Hombre';
+  }
+
+  if (['mujer', 'femenino', 'female', 'women', 'woman'].includes(gender)) {
+    return 'Mujer';
+  }
+
+  if (['unisex', 'uni sex', 'ambos'].includes(gender)) {
+    return 'Unisex';
+  }
+
+  return 'Desconocido';
+}
+
 function getCell(row: string[], headers: string[], possibleNames: string[]) {
   for (const name of possibleNames) {
     const index = headers.findIndex(
@@ -66,7 +88,7 @@ function parseCsvLine(line: string) {
 export async function getProducts(): Promise<Product[]> {
   const url =
     process.env.GOOGLE_SHEET_CSV_URL ||
-    'TU_URL_CSV';
+    'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1zsgjxmnRQ0I27jwdFvaHbjma8L3bmMb500TITz7heoiLnarXTeBWhbuHXZzq6AGjsY9bbJkUni82/pub?gid=1050214761&single=true&output=csv';
 
   const res = await fetch(url, { cache: 'no-store' });
   const text = await res.text();
@@ -93,7 +115,11 @@ export async function getProducts(): Promise<Product[]> {
       id: String(i + 1),
       brand: getCell(r, headers, ['Marca']),
       name: getCell(r, headers, ['Producto']),
-      category: normalizeGender(row[15] ?? ''),
+
+      // Usamos la categoría existente, pero alimentada por Género.
+      // Columna P = índice 15.
+      category: normalizeGender(r[15] ?? ''),
+
       price: num(r[3]),
       stock: Math.floor(Math.random() * 20) + 5,
       sku: undefined,
