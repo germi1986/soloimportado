@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { CartItem, Product } from '@/lib/types';
 
 const MIN_ORDER = 300;
@@ -33,43 +33,113 @@ export default function CatalogClient({ products }: { products: Product[] }) {
   const [selectedSize, setSelectedSize] = useState('all');
   const [sortOrder, setSortOrder] = useState<'none' | 'asc' | 'desc'>('none');
 
-  const brands = useMemo(() => {
-    return Array.from(new Set(products.map((p) => p.brand).filter(Boolean))).sort();
-  }, [products]);
+  const normalizedQuery = query.toLowerCase().trim();
 
-  const categories = useMemo(() => {
+  function matchesSearch(product: Product) {
+    return (
+      !normalizedQuery ||
+      [product.name, product.brand, product.category, product.description, product.sku]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+        .includes(normalizedQuery)
+    );
+  }
+
+  function sortCategories(values: string[]) {
     const order = ['Hombre', 'Mujer', 'Unisex', 'Desconocido'];
 
-    return Array.from(new Set(products.map((p) => p.category).filter(Boolean))).sort(
-      (a, b) => {
-        const ia = order.indexOf(String(a));
-        const ib = order.indexOf(String(b));
+    return values.sort((a, b) => {
+      const ia = order.indexOf(String(a));
+      const ib = order.indexOf(String(b));
 
-        if (ia === -1 && ib === -1) return String(a).localeCompare(String(b));
-        if (ia === -1) return 1;
-        if (ib === -1) return -1;
+      if (ia === -1 && ib === -1) return String(a).localeCompare(String(b));
+      if (ia === -1) return 1;
+      if (ib === -1) return -1;
 
-        return ia - ib;
-      }
+      return ia - ib;
+    });
+  }
+
+  const brands = useMemo(() => {
+    return Array.from(
+      new Set(
+        products
+          .filter((product) => {
+            const matchesCategory =
+              selectedCategory === 'all' || product.category === selectedCategory;
+
+            const matchesSize =
+              selectedSize === 'all' || product.description === selectedSize;
+
+            return matchesSearch(product) && matchesCategory && matchesSize;
+          })
+          .map((p) => p.brand)
+          .filter(Boolean)
+      )
+    ).sort();
+  }, [products, normalizedQuery, selectedCategory, selectedSize]);
+
+  const categories = useMemo(() => {
+    const availableCategories = Array.from(
+      new Set(
+        products
+          .filter((product) => {
+            const matchesBrand =
+              selectedBrand === 'all' || product.brand === selectedBrand;
+
+            const matchesSize =
+              selectedSize === 'all' || product.description === selectedSize;
+
+            return matchesSearch(product) && matchesBrand && matchesSize;
+          })
+          .map((p) => p.category)
+          .filter(Boolean)
+      )
     );
-  }, [products]);
+
+    return sortCategories(availableCategories);
+  }, [products, normalizedQuery, selectedBrand, selectedSize]);
 
   const sizes = useMemo(() => {
-    return Array.from(new Set(products.map((p) => p.description).filter(Boolean))).sort();
-  }, [products]);
+    return Array.from(
+      new Set(
+        products
+          .filter((product) => {
+            const matchesBrand =
+              selectedBrand === 'all' || product.brand === selectedBrand;
+
+            const matchesCategory =
+              selectedCategory === 'all' || product.category === selectedCategory;
+
+            return matchesSearch(product) && matchesBrand && matchesCategory;
+          })
+          .map((p) => p.description)
+          .filter(Boolean)
+      )
+    ).sort();
+  }, [products, normalizedQuery, selectedBrand, selectedCategory]);
+
+  useEffect(() => {
+    if (selectedBrand !== 'all' && !brands.includes(selectedBrand)) {
+      setSelectedBrand('all');
+    }
+  }, [brands, selectedBrand]);
+
+  useEffect(() => {
+    if (selectedCategory !== 'all' && !categories.includes(selectedCategory)) {
+      setSelectedCategory('all');
+    }
+  }, [categories, selectedCategory]);
+
+  useEffect(() => {
+    if (selectedSize !== 'all' && !sizes.includes(selectedSize)) {
+      setSelectedSize('all');
+    }
+  }, [sizes, selectedSize]);
 
   const filteredProducts = useMemo(() => {
-    const normalizedQuery = query.toLowerCase().trim();
-
     let result = products.filter((product) => {
-      const matchesQuery =
-        !normalizedQuery ||
-        [product.name, product.brand, product.category, product.description, product.sku]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase()
-          .includes(normalizedQuery);
-
       const matchesBrand =
         selectedBrand === 'all' || product.brand === selectedBrand;
 
@@ -79,7 +149,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
       const matchesSize =
         selectedSize === 'all' || product.description === selectedSize;
 
-      return matchesQuery && matchesBrand && matchesCategory && matchesSize;
+      return matchesSearch(product) && matchesBrand && matchesCategory && matchesSize;
     });
 
     if (sortOrder === 'asc') {
