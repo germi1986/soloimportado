@@ -127,3 +127,5 @@ stock: Math.floor(Math.random() * 20) + 5,
 sku: undefined,
 
 imageUrl: getCell(r, headers, ['Imagen', 'URL Imagen', 'URLImagen'])
+      }));
+}
