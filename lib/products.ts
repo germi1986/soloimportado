@@ -118,7 +118,7 @@ export async function getProducts(): Promise<Product[]> {
 
       // Usamos la categoría existente, pero alimentada por Género.
       // Columna P = índice 15.
-      category: normalizeGender(r[15] ?? ''),
+      category: `P=${r[15] || 'VACIO'} | columnas=${r.length}`,
 
       price: num(r[3]),
       stock: Math.floor(Math.random() * 20) + 5,
