@@ -3,7 +3,6 @@ export type Product = {
   name: string;
   brand?: string;
   category?: string;
-  gender?: 'hombre' | 'mujer' | 'unisex' | 'desconocido';
   description?: string;
   price: number;
   stock?: number;
