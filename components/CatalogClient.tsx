@@ -30,6 +30,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
   const [viewMode, setViewMode] = useState<'catalog' | 'list'>('list');
   const [selectedBrand, setSelectedBrand] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedSize, setSelectedSize] = useState('all');
   const [sortOrder, setSortOrder] = useState<'none' | 'asc' | 'desc'>('none');
 
   const brands = useMemo(() => {
@@ -37,7 +38,24 @@ export default function CatalogClient({ products }: { products: Product[] }) {
   }, [products]);
 
   const categories = useMemo(() => {
-    return Array.from(new Set(products.map((p) => p.category).filter(Boolean))).sort();
+    const order = ['Hombre', 'Mujer', 'Unisex', 'Desconocido'];
+
+    return Array.from(new Set(products.map((p) => p.category).filter(Boolean))).sort(
+      (a, b) => {
+        const ia = order.indexOf(String(a));
+        const ib = order.indexOf(String(b));
+
+        if (ia === -1 && ib === -1) return String(a).localeCompare(String(b));
+        if (ia === -1) return 1;
+        if (ib === -1) return -1;
+
+        return ia - ib;
+      }
+    );
+  }, [products]);
+
+  const sizes = useMemo(() => {
+    return Array.from(new Set(products.map((p) => p.description).filter(Boolean))).sort();
   }, [products]);
 
   const filteredProducts = useMemo(() => {
@@ -58,7 +76,10 @@ export default function CatalogClient({ products }: { products: Product[] }) {
       const matchesCategory =
         selectedCategory === 'all' || product.category === selectedCategory;
 
-      return matchesQuery && matchesBrand && matchesCategory;
+      const matchesSize =
+        selectedSize === 'all' || product.description === selectedSize;
+
+      return matchesQuery && matchesBrand && matchesCategory && matchesSize;
     });
 
     if (sortOrder === 'asc') {
@@ -70,7 +91,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
     }
 
     return result;
-  }, [products, query, selectedBrand, selectedCategory, sortOrder]);
+  }, [products, query, selectedBrand, selectedCategory, selectedSize, sortOrder]);
 
   const visibleProducts = filteredProducts.slice(0, visibleCount);
   const hasMoreProducts = visibleCount < filteredProducts.length;
@@ -232,7 +253,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
               }}
             />
 
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-4">
               <select
                 className="rounded-xl border border-neutral-300 px-4 py-3 outline-none focus:border-black"
                 value={selectedBrand}
@@ -261,6 +282,22 @@ export default function CatalogClient({ products }: { products: Product[] }) {
                 {categories.map((category) => (
                   <option key={category} value={category}>
                     {category}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                className="rounded-xl border border-neutral-300 px-4 py-3 outline-none focus:border-black"
+                value={selectedSize}
+                onChange={(e) => {
+                  setSelectedSize(e.target.value);
+                  resetVisibleProducts();
+                }}
+              >
+                <option value="all">Todos los tamaños</option>
+                {sizes.map((size) => (
+                  <option key={size} value={size}>
+                    {size}
                   </option>
                 ))}
               </select>
