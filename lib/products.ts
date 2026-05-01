@@ -117,13 +117,13 @@ export async function getProducts(): Promise<Product[]> {
       name: getCell(r, headers, ['Producto']),
 
       // Ahora "Categoría" se alimenta desde la columna Género/Genero.
-      category: normalizeGender(getCell(r, headers, ['Genero', 'Género'])),
-      description: getCell(r, headers, ['Tamaño', 'Categoria', 'Categoría']),
+      // Ahora "Categoría" se alimenta desde la columna Género/Genero.
+category: normalizeGender(getCell(r, headers, ['Genero', 'Género'])),
 
-      price: num(r[3]),
-      stock: Math.floor(Math.random() * 20) + 5,
-      sku: undefined,
-      description: getCell(r, headers, ['Tamaño', 'Categoria', 'Categoría']),
-      imageUrl: getCell(r, headers, ['Imagen', 'URL Imagen', 'URLImagen'])
-    }));
-}
+description: getCell(r, headers, ['Tamaño', 'Categoria', 'Categoría']),
+
+price: num(r[3]),
+stock: Math.floor(Math.random() * 20) + 5,
+sku: undefined,
+
+imageUrl: getCell(r, headers, ['Imagen', 'URL Imagen', 'URLImagen'])
