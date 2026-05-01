@@ -125,18 +125,8 @@ function detectHeaderIndex(rows: string[][]) {
 }
 
 function getGender(row: string[], headers: string[]) {
-  const byHeader = getCell(row, headers, [
-    'Genero',
-    'Género',
-    'Gender',
-    'Sexo',
-    'Genero comercial',
-    'Género comercial'
-  ]);
-
-  if (byHeader) return normalizeGender(byHeader);
-
-  // Columna P = índice 15
+  // FORZADO: columna P = índice 15
+  // P2 en adelante contiene el género.
   return normalizeGender(row[15] ?? '');
 }
 
