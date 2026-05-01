@@ -18,6 +18,28 @@ function clean(value: string) {
     .trim();
 }
 
+function normalizeGender(value: string) {
+  const gender = clean(value)
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+
+  if (['hombre', 'masculino', 'male', 'men', 'man'].includes(gender)) {
+    return 'Hombre';
+  }
+
+  if (['mujer', 'femenino', 'female', 'women', 'woman'].includes(gender)) {
+    return 'Mujer';
+  }
+
+  if (['unisex', 'uni sex', 'ambos'].includes(gender)) {
+    return 'Unisex';
+  }
+
+  return 'Desconocido';
+}
+
 function getCell(row: string[], headers: string[], possibleNames: string[]) {
   for (const name of possibleNames) {
     const index = headers.findIndex(
@@ -93,7 +115,10 @@ export async function getProducts(): Promise<Product[]> {
       id: String(i + 1),
       brand: getCell(r, headers, ['Marca']),
       name: getCell(r, headers, ['Producto']),
-      category: getCell(r, headers, ['Tamaño', 'Categoria', 'Categoría']),
+
+      // Ahora "Categoría" se alimenta desde la columna Género/Genero.
+      category: normalizeGender(getCell(r, headers, ['Genero', 'Género'])),
+
       price: num(r[3]),
       stock: Math.floor(Math.random() * 20) + 5,
       sku: undefined,
