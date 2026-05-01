@@ -13,20 +13,8 @@ const DISCOUNT_TIERS = [
   { amount: 2000, percent: 12 }
 ];
 
-const GENDERS = [
-  { value: 'hombre', label: 'Hombre' },
-  { value: 'mujer', label: 'Mujer' },
-  { value: 'unisex', label: 'Unisex' },
-  { value: 'desconocido', label: 'Desconocido' }
-] as const;
-
 function formatCurrency(value: number) {
   return `USD ${value.toFixed(2)}`;
-}
-
-function formatGender(gender?: string) {
-  const found = GENDERS.find((g) => g.value === gender);
-  return found ? found.label : 'Desconocido';
 }
 
 export default function CatalogClient({ products }: { products: Product[] }) {
@@ -37,11 +25,15 @@ export default function CatalogClient({ products }: { products: Product[] }) {
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_PRODUCTS);
   const [viewMode, setViewMode] = useState<'catalog' | 'list'>('list');
   const [selectedBrand, setSelectedBrand] = useState('all');
-  const [selectedGender, setSelectedGender] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [sortOrder, setSortOrder] = useState<'none' | 'asc' | 'desc'>('none');
 
   const brands = useMemo(() => {
     return Array.from(new Set(products.map((p) => p.brand).filter(Boolean))).sort();
+  }, [products]);
+
+  const categories = useMemo(() => {
+    return Array.from(new Set(products.map((p) => p.category).filter(Boolean))).sort();
   }, [products]);
 
   const filteredProducts = useMemo(() => {
@@ -50,7 +42,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
     let result = products.filter((product) => {
       const matchesQuery =
         !normalizedQuery ||
-        [product.name, product.brand, product.category, product.gender, product.sku]
+        [product.name, product.brand, product.category, product.sku]
           .filter(Boolean)
           .join(' ')
           .toLowerCase()
@@ -59,10 +51,10 @@ export default function CatalogClient({ products }: { products: Product[] }) {
       const matchesBrand =
         selectedBrand === 'all' || product.brand === selectedBrand;
 
-      const matchesGender =
-        selectedGender === 'all' || product.gender === selectedGender;
+      const matchesCategory =
+        selectedCategory === 'all' || product.category === selectedCategory;
 
-      return matchesQuery && matchesBrand && matchesGender;
+      return matchesQuery && matchesBrand && matchesCategory;
     });
 
     if (sortOrder === 'asc') {
@@ -74,7 +66,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
     }
 
     return result;
-  }, [products, query, selectedBrand, selectedGender, sortOrder]);
+  }, [products, query, selectedBrand, selectedCategory, sortOrder]);
 
   const visibleProducts = filteredProducts.slice(0, visibleCount);
   const hasMoreProducts = visibleCount < filteredProducts.length;
@@ -230,7 +222,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
           <div className="mb-5 rounded-2xl bg-white p-4 shadow-sm">
             <input
               className="mb-4 w-full rounded-xl border border-neutral-300 px-4 py-3 outline-none focus:border-black"
-              placeholder="Buscar por producto, marca, tamaño o género..."
+              placeholder="Buscar por producto, marca o tamaño..."
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
@@ -257,16 +249,16 @@ export default function CatalogClient({ products }: { products: Product[] }) {
 
               <select
                 className="rounded-xl border border-neutral-300 px-4 py-3 outline-none focus:border-black"
-                value={selectedGender}
+                value={selectedCategory}
                 onChange={(e) => {
-                  setSelectedGender(e.target.value);
+                  setSelectedCategory(e.target.value);
                   resetVisibleProducts();
                 }}
               >
-                <option value="all">Todos los géneros</option>
-                {GENDERS.map((gender) => (
-                  <option key={gender.value} value={gender.value}>
-                    {gender.label}
+                <option value="all">Todas las categorías</option>
+                {categories.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
                   </option>
                 ))}
               </select>
@@ -440,10 +432,6 @@ export default function CatalogClient({ products }: { products: Product[] }) {
 
                         <h2 className="text-lg font-bold">{product.name}</h2>
 
-                        <p className="text-sm font-semibold text-neutral-700">
-                          {formatGender(product.gender)}
-                        </p>
-
                         {product.category && (
                           <p className="text-sm text-neutral-600">
                             {product.category}
@@ -516,8 +504,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
                       <th className="p-3">Img</th>
                       <th className="p-3">Producto</th>
                       <th className="p-3">Marca</th>
-                      <th className="p-3">Género</th>
-                      <th className="p-3">Tamaño</th>
+                      <th className="p-3">Categoría</th>
                       <th className="p-3">Precio</th>
                       <th className="p-3">Stock</th>
                       <th className="p-3">Estado</th>
@@ -554,7 +541,6 @@ export default function CatalogClient({ products }: { products: Product[] }) {
 
                           <td className="p-3 font-bold">{product.name}</td>
                           <td className="p-3">{product.brand}</td>
-                          <td className="p-3 font-semibold">{formatGender(product.gender)}</td>
                           <td className="p-3">{product.category}</td>
                           <td className="p-3 font-black">{formatCurrency(product.price)}</td>
                           <td className="p-3">{product.stock}</td>
@@ -661,9 +647,6 @@ export default function CatalogClient({ products }: { products: Product[] }) {
                           </div>
 
                           <h3 className="font-bold leading-tight">{product.name}</h3>
-                          <p className="text-sm font-semibold text-neutral-700">
-                            {formatGender(product.gender)}
-                          </p>
                           <p className="text-sm text-neutral-600">{product.category}</p>
 
                           <div className="mt-1 flex justify-between gap-3">
