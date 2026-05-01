@@ -17,6 +17,10 @@ function formatCurrency(value: number) {
   return `USD ${value.toFixed(2)}`;
 }
 
+function productMeta(product: Product) {
+  return [product.category, product.description].filter(Boolean).join(' · ');
+}
+
 export default function CatalogClient({ products }: { products: Product[] }) {
   const [query, setQuery] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -42,7 +46,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
     let result = products.filter((product) => {
       const matchesQuery =
         !normalizedQuery ||
-        [product.name, product.brand, product.category, product.sku]
+        [product.name, product.brand, product.category, product.description, product.sku]
           .filter(Boolean)
           .join(' ')
           .toLowerCase()
@@ -179,7 +183,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
 
   function buildWhatsAppText() {
     const lines = cart.map((item) => {
-      const size = item.category ? ` (${item.category})` : '';
+      const size = item.description ? ` (${item.description})` : '';
       return `• ${item.quantity} x ${item.name}${size} - ${formatCurrency(
         item.price * item.quantity
       )}`;
@@ -202,7 +206,6 @@ export default function CatalogClient({ products }: { products: Product[] }) {
 
   return (
     <div id="top" className="relative pb-28 lg:pb-0">
-
       <a
         href="#top"
         className="fixed bottom-24 right-4 z-50 rounded-full bg-black px-4 py-3 text-white shadow-lg lg:bottom-6"
@@ -218,11 +221,10 @@ export default function CatalogClient({ products }: { products: Product[] }) {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <section>
-
           <div className="mb-5 rounded-2xl bg-white p-4 shadow-sm">
             <input
               className="mb-4 w-full rounded-xl border border-neutral-300 px-4 py-3 outline-none focus:border-black"
-              placeholder="Buscar por producto, marca o tamaño..."
+              placeholder="Buscar por producto, marca, género o tamaño..."
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
@@ -255,7 +257,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
                   resetVisibleProducts();
                 }}
               >
-                <option value="all">Todas las categorías</option>
+                <option value="all">Todos los géneros</option>
                 {categories.map((category) => (
                   <option key={category} value={category}>
                     {category}
@@ -432,9 +434,9 @@ export default function CatalogClient({ products }: { products: Product[] }) {
 
                         <h2 className="text-lg font-bold">{product.name}</h2>
 
-                        {product.category && (
+                        {productMeta(product) && (
                           <p className="text-sm text-neutral-600">
-                            {product.category}
+                            {productMeta(product)}
                           </p>
                         )}
                       </div>
@@ -504,7 +506,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
                       <th className="p-3">Img</th>
                       <th className="p-3">Producto</th>
                       <th className="p-3">Marca</th>
-                      <th className="p-3">Categoría</th>
+                      <th className="p-3">Género / Tamaño</th>
                       <th className="p-3">Precio</th>
                       <th className="p-3">Stock</th>
                       <th className="p-3">Estado</th>
@@ -541,7 +543,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
 
                           <td className="p-3 font-bold">{product.name}</td>
                           <td className="p-3">{product.brand}</td>
-                          <td className="p-3">{product.category}</td>
+                          <td className="p-3">{productMeta(product)}</td>
                           <td className="p-3 font-black">{formatCurrency(product.price)}</td>
                           <td className="p-3">{product.stock}</td>
 
@@ -647,7 +649,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
                           </div>
 
                           <h3 className="font-bold leading-tight">{product.name}</h3>
-                          <p className="text-sm text-neutral-600">{product.category}</p>
+                          <p className="text-sm text-neutral-600">{productMeta(product)}</p>
 
                           <div className="mt-1 flex justify-between gap-3">
                             <p className="font-black">{formatCurrency(product.price)}</p>
@@ -743,7 +745,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
                   <div>
                     <p className="font-semibold">
                       {item.name}
-                      {item.category ? ` (${item.category})` : ''}
+                      {item.description ? ` (${item.description})` : ''}
                     </p>
                     <p className="text-sm text-neutral-500">
                       {formatCurrency(item.price * item.quantity)}
