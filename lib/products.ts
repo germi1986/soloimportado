@@ -3,11 +3,16 @@ import type { Product } from './types';
 function num(v: string) {
   const raw = String(v ?? '').trim();
 
-  const cleaned = raw
-    .replace(/[^\d.,-]/g, '')
-    .replace(',', '.');
+  if (!raw) return 0;
 
-  const n = Number(cleaned);
+  // 👉 elimina separador de miles (.)
+  // 👉 convierte decimal (,) a punto
+  const cleaned = raw
+    .replace(/\./g, '')
+    .replace(',', '.')
+    .replace(/[^\d.-]/g, '');
+
+  const n = parseFloat(cleaned);
 
   return Number.isFinite(n) ? n : 0;
 }
@@ -109,30 +114,30 @@ export async function getProducts(): Promise<Product[]> {
   const headers = rows[headerIndex];
   const data = rows.slice(headerIndex + 1);
 
-    return data
+  return data
     .filter((r) => getCell(r, headers, ['Producto']))
     .map((r, i) => ({
-  id: String(i + 1),
-  brand: getCell(r, headers, ['Marca']),
-  name: getCell(r, headers, ['Producto']),
+      id: String(i + 1),
+      brand: getCell(r, headers, ['Marca']),
+      name: getCell(r, headers, ['Producto']),
 
-  // 👉 ESTO NO SE TOCA (género)
-  category: normalizeGender(getCell(r, headers, ['Genero', 'Género'])),
+      // 👉 género (NO tocar)
+      category: normalizeGender(getCell(r, headers, ['Genero', 'Género'])),
 
-  // 👉 NUEVO: categoría principal desde columna L
-  mainCategory: clean(r[11] ?? getCell(r, headers, ['Categoria', 'Categoría'])),
+      // 👉 categoría principal
+      mainCategory: clean(r[11] ?? getCell(r, headers, ['Categoria', 'Categoría'])),
 
-  description: getCell(r, headers, ['Tamaño', 'Categoria', 'Categoría']),
+      description: getCell(r, headers, ['Tamaño', 'Categoria', 'Categoría']),
 
-  // 👉 USD (columna D)
-  price: num(r[3]),
+      // 👉 USD
+      price: num(r[3]),
 
-  // 👉 NUEVO: ARS (columna E)
-  priceArs: num(r[4]),
+      // 👉 ARS (CORREGIDO)
+      priceArs: num(r[4]),
 
-  stock: Math.floor(Math.random() * 20) + 5,
-  sku: undefined,
+      stock: Math.floor(Math.random() * 20) + 5,
+      sku: undefined,
 
-  imageUrl: getCell(r, headers, ['Imagen', 'URL Imagen', 'URLImagen'])
-}))
+      imageUrl: getCell(r, headers, ['Imagen', 'URL Imagen', 'URLImagen'])
+    }));
 }
