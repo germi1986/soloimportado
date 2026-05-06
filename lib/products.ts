@@ -5,22 +5,23 @@ function num(v: string) {
 
   if (!raw) return 0;
 
-  // 👉 elimina separador de miles (.)
-  // 👉 convierte decimal (,) a punto
-  const cleaned = raw
-    .replace(/\./g, '')
-    .replace(',', '.')
-    .replace(/[^\d.-]/g, '');
+  // Caso 1: formato argentino → 48.000 o 1.250,50
+  if (raw.includes(',')) {
+    const cleaned = raw
+      .replace(/\./g, '')   // quita miles
+      .replace(',', '.')    // decimal correcto
+      .replace(/[^\d.-]/g, '');
 
+    const n = parseFloat(cleaned);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  // Caso 2: formato internacional → 33.90
+  const cleaned = raw.replace(/[^\d.-]/g, '');
   const n = parseFloat(cleaned);
 
   return Number.isFinite(n) ? n : 0;
-}
 
-function clean(value: string) {
-  return String(value ?? '')
-    .replace(/^"|"$/g, '')
-    .trim();
 }
 
 function normalizeGender(value: string) {
