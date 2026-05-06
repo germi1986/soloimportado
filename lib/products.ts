@@ -5,23 +5,28 @@ function num(v: string) {
 
   if (!raw) return 0;
 
-  // Caso 1: formato argentino → 48.000 o 1.250,50
+  // 👉 Si tiene coma, es formato argentino
   if (raw.includes(',')) {
     const cleaned = raw
-      .replace(/\./g, '')   // quita miles
-      .replace(',', '.')    // decimal correcto
+      .replace(/\./g, '')   // elimina miles
+      .replace(',', '.')    // convierte decimal
       .replace(/[^\d.-]/g, '');
 
     const n = parseFloat(cleaned);
     return Number.isFinite(n) ? n : 0;
   }
 
-  // Caso 2: formato internacional → 33.90
+  // 👉 Si NO tiene coma, es formato internacional (USD)
   const cleaned = raw.replace(/[^\d.-]/g, '');
   const n = parseFloat(cleaned);
 
   return Number.isFinite(n) ? n : 0;
+}
 
+function clean(value: string) {
+  return String(value ?? '')
+    .replace(/^"|"$/g, '')
+    .trim();
 }
 
 function normalizeGender(value: string) {
@@ -122,7 +127,7 @@ export async function getProducts(): Promise<Product[]> {
       brand: getCell(r, headers, ['Marca']),
       name: getCell(r, headers, ['Producto']),
 
-      // 👉 género (NO tocar)
+      // 👉 género
       category: normalizeGender(getCell(r, headers, ['Genero', 'Género'])),
 
       // 👉 categoría principal
@@ -133,7 +138,7 @@ export async function getProducts(): Promise<Product[]> {
       // 👉 USD
       price: num(r[3]),
 
-      // 👉 ARS (CORREGIDO)
+      // 👉 ARS
       priceArs: num(r[4]),
 
       stock: Math.floor(Math.random() * 20) + 5,
