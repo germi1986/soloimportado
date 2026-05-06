@@ -1,25 +1,34 @@
 import type { Product } from './types';
 
-function num(v: string) {
+function num(v: string, kind: 'usd' | 'ars' = 'usd') {
   const raw = String(v ?? '').trim();
-
   if (!raw) return 0;
 
-  // 👉 Si tiene coma, es formato argentino
-  if (raw.includes(',')) {
-    const cleaned = raw
-      .replace(/\./g, '')   // elimina miles
-      .replace(',', '.')    // convierte decimal
-      .replace(/[^\d.-]/g, '');
+  const only = raw.replace(/[^\d.,-]/g, '');
 
-    const n = parseFloat(cleaned);
+  if (kind === 'ars') {
+    if (only.includes(',')) {
+      const cleaned = only.replace(/\./g, '').replace(',', '.');
+      const n = parseFloat(cleaned);
+      return Number.isFinite(n) ? n : 0;
+    }
+
+    if (only.includes('.')) {
+      const parts = only.split('.');
+      const last = parts[parts.length - 1];
+
+      if (last.length === 3) {
+        const n = parseFloat(only.replace(/\./g, ''));
+        return Number.isFinite(n) ? n : 0;
+      }
+    }
+
+    const n = parseFloat(only);
     return Number.isFinite(n) ? n : 0;
   }
 
-  // 👉 Si NO tiene coma, es formato internacional (USD)
-  const cleaned = raw.replace(/[^\d.-]/g, '');
+  const cleaned = only.replace(',', '.');
   const n = parseFloat(cleaned);
-
   return Number.isFinite(n) ? n : 0;
 }
 
@@ -36,17 +45,9 @@ function normalizeGender(value: string) {
     .replace(/[\u0300-\u036f]/g, '')
     .trim();
 
-  if (['hombre', 'masculino', 'male', 'men', 'man'].includes(gender)) {
-    return 'Hombre';
-  }
-
-  if (['mujer', 'femenino', 'female', 'women', 'woman'].includes(gender)) {
-    return 'Mujer';
-  }
-
-  if (['unisex', 'uni sex', 'ambos'].includes(gender)) {
-    return 'Unisex';
-  }
+  if (['hombre', 'masculino', 'male', 'men', 'man'].includes(gender)) return 'Hombre';
+  if (['mujer', 'femenino', 'female', 'women', 'woman'].includes(gender)) return 'Mujer';
+  if (['unisex', 'uni sex', 'ambos'].includes(gender)) return 'Unisex';
 
   return 'Desconocido';
 }
@@ -126,24 +127,13 @@ export async function getProducts(): Promise<Product[]> {
       id: String(i + 1),
       brand: getCell(r, headers, ['Marca']),
       name: getCell(r, headers, ['Producto']),
-
-      // 👉 género
       category: normalizeGender(getCell(r, headers, ['Genero', 'Género'])),
-
-      // 👉 categoría principal
       mainCategory: clean(r[11] ?? getCell(r, headers, ['Categoria', 'Categoría'])),
-
       description: getCell(r, headers, ['Tamaño', 'Categoria', 'Categoría']),
-
-      // 👉 USD
-      price: num(r[3]),
-
-      // 👉 ARS
-      priceArs: num(r[4]),
-
+      price: num(r[3], 'usd'),
+      priceArs: num(r[4], 'ars'),
       stock: Math.floor(Math.random() * 20) + 5,
       sku: undefined,
-
       imageUrl: getCell(r, headers, ['Imagen', 'URL Imagen', 'URLImagen'])
     }));
 }
