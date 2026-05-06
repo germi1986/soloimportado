@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { CartItem, Product } from '@/lib/types';
 
-const MIN_ORDER = 300;
+const MIN_ORDER = 200;
 const FREE_SHIPPING_AMOUNT = 200;
 const INITIAL_VISIBLE_PRODUCTS = 24;
 const PRODUCTS_STEP = 24;
