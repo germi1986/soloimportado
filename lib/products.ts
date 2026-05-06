@@ -109,23 +109,30 @@ export async function getProducts(): Promise<Product[]> {
   const headers = rows[headerIndex];
   const data = rows.slice(headerIndex + 1);
 
-  return data
+    return data
     .filter((r) => getCell(r, headers, ['Producto']))
     .map((r, i) => ({
       id: String(i + 1),
       brand: getCell(r, headers, ['Marca']),
       name: getCell(r, headers, ['Producto']),
 
-      // Ahora "Categoría" se alimenta desde la columna Género/Genero.
-      // Ahora "Categoría" se alimenta desde la columna Género/Genero.
-category: normalizeGender(getCell(r, headers, ['Genero', 'Género'])),
+      // Esto sigue siendo género: Hombre / Mujer / Unisex / Desconocido
+      category: normalizeGender(getCell(r, headers, ['Genero', 'Género'])),
 
-description: getCell(r, headers, ['Tamaño', 'Categoria', 'Categoría']),
+      // Nueva categoría principal desde columna L
+      mainCategory: clean(r[11] ?? getCell(r, headers, ['Categoria', 'Categoría'])),
 
-price: num(r[3]),
-stock: Math.floor(Math.random() * 20) + 5,
-sku: undefined,
+      description: getCell(r, headers, ['Tamaño', 'Categoria', 'Categoría']),
 
-imageUrl: getCell(r, headers, ['Imagen', 'URL Imagen', 'URLImagen'])
-      }));
+      // Precio USD desde columna D
+      price: num(r[3]),
+
+      // Precio ARS desde columna E
+      priceArs: num(r[4]),
+
+      stock: Math.floor(Math.random() * 20) + 5,
+      sku: undefined,
+
+      imageUrl: getCell(r, headers, ['Imagen', 'URL Imagen', 'URLImagen'])
+    }));
 }
