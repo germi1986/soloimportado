@@ -35,7 +35,9 @@ function getProductTotalArs(product: Product, quantity = 1) {
 }
 
 function productMeta(product: Product) {
-  return [product.mainCategory, product.category, product.description].filter((value): value is string => Boolean(value)).join(' · ');
+  return [product.mainCategory, product.category, product.description]
+    .filter((value): value is string => Boolean(value))
+    .join(' · ');
 }
 
 export default function CatalogClient({ products }: { products: Product[] }) {
@@ -229,6 +231,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
     const itemTotalArs = getProductTotalArs(item, item.quantity);
     return sum + (itemTotalArs || 0);
   }, 0);
+
   const totalUnits = cart.reduce((sum, item) => sum + item.quantity, 0);
   const meetsMinimum = total >= MIN_ORDER;
   const hasFreeShipping = total >= FREE_SHIPPING_AMOUNT;
@@ -246,9 +249,11 @@ export default function CatalogClient({ products }: { products: Product[] }) {
     : 0;
 
   const finalTotal = total - discountAmount;
+
   const discountAmountArs = currentDiscount && totalArs > 0
     ? totalArs * (currentDiscount.percent / 100)
     : 0;
+
   const finalTotalArs = totalArs - discountAmountArs;
 
   function resetVisibleProducts() {
@@ -486,7 +491,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
                 meetsMinimum ? 'text-green-800' : 'text-yellow-800'
               }`}
             >
-              Compra mínima: USD 300
+              Compra mínima: USD 200
             </p>
 
             <div
@@ -584,6 +589,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
             </summary>
 
             <div className="mt-4 space-y-3 text-sm text-neutral-700">
+              <p><strong>Compra mínima:</strong> USD 200.</p>
               <p><strong>Pagos:</strong> Efectivo (CABA/GBA), Transferencia (+5%), USDT sin recargo.</p>
               <p><strong>Envíos:</strong> Gratis CABA/GBA desde USD 200. Interior a coordinar.</p>
               <p><strong>Descuentos:</strong> desde USD 300 (3%) hasta USD 2000 (12%).</p>
@@ -1102,7 +1108,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
               target="_blank"
               rel="noopener noreferrer"
             >
-              {meetsMinimum ? 'Confirmar pedido por WhatsApp' : 'Mínimo USD 300'}
+              {meetsMinimum ? 'Confirmar pedido por WhatsApp' : 'Mínimo USD 200'}
             </a>
 
             {meetsMinimum && (
