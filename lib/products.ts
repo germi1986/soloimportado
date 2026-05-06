@@ -112,27 +112,27 @@ export async function getProducts(): Promise<Product[]> {
     return data
     .filter((r) => getCell(r, headers, ['Producto']))
     .map((r, i) => ({
-      id: String(i + 1),
-      brand: getCell(r, headers, ['Marca']),
-      name: getCell(r, headers, ['Producto']),
+  id: String(i + 1),
+  brand: getCell(r, headers, ['Marca']),
+  name: getCell(r, headers, ['Producto']),
 
-      // Esto sigue siendo género: Hombre / Mujer / Unisex / Desconocido
-      category: normalizeGender(getCell(r, headers, ['Genero', 'Género'])),
+  // 👉 ESTO NO SE TOCA (género)
+  category: normalizeGender(getCell(r, headers, ['Genero', 'Género'])),
 
-      // Nueva categoría principal desde columna L
-      mainCategory: clean(r[11] ?? getCell(r, headers, ['Categoria', 'Categoría'])),
+  // 👉 NUEVO: categoría principal desde columna L
+  mainCategory: clean(r[11] ?? getCell(r, headers, ['Categoria', 'Categoría'])),
 
-      description: getCell(r, headers, ['Tamaño', 'Categoria', 'Categoría']),
+  description: getCell(r, headers, ['Tamaño', 'Categoria', 'Categoría']),
 
-      // Precio USD desde columna D
-      price: num(r[3]),
+  // 👉 USD (columna D)
+  price: num(r[3]),
 
-      // Precio ARS desde columna E
-      priceArs: num(r[4]),
+  // 👉 NUEVO: ARS (columna E)
+  priceArs: num(r[4]),
 
-      stock: Math.floor(Math.random() * 20) + 5,
-      sku: undefined,
+  stock: Math.floor(Math.random() * 20) + 5,
+  sku: undefined,
 
-      imageUrl: getCell(r, headers, ['Imagen', 'URL Imagen', 'URLImagen'])
-    }));
+  imageUrl: getCell(r, headers, ['Imagen', 'URL Imagen', 'URLImagen'])
+}))
 }
