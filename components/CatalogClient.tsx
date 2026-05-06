@@ -4,10 +4,12 @@ import { useEffect, useMemo, useState } from 'react';
 import type { CartItem, Product } from '@/lib/types';
 
 const MIN_ORDER = 300;
+const FREE_SHIPPING_AMOUNT = 200;
 const INITIAL_VISIBLE_PRODUCTS = 24;
 const PRODUCTS_STEP = 24;
 
 const DISCOUNT_TIERS = [
+  { amount: 300, percent: 3 },
   { amount: 500, percent: 5 },
   { amount: 1000, percent: 8 },
   { amount: 2000, percent: 12 }
@@ -15,7 +17,8 @@ const DISCOUNT_TIERS = [
 
 function formatCurrency(value: number) {
   return `USD ${value.toFixed(2)}`;
-  
+}
+
 function formatArs(value?: number) {
   if (!value || Number.isNaN(value)) return null;
 
@@ -24,11 +27,15 @@ function formatArs(value?: number) {
     currency: 'ARS',
     maximumFractionDigits: 0
   }).format(value);
+}
 
+function getProductTotalArs(product: Product, quantity = 1) {
+  if (!product.priceArs || Number.isNaN(product.priceArs)) return null;
+  return product.priceArs * quantity;
 }
 
 function productMeta(product: Product) {
-  return [product.category, product.description].filter((value): value is string => Boolean(value)).join(' · ');
+  return [product.mainCategory, product.category, product.description].filter((value): value is string => Boolean(value)).join(' · ');
 }
 
 export default function CatalogClient({ products }: { products: Product[] }) {
@@ -40,6 +47,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
   const [viewMode, setViewMode] = useState<'catalog' | 'list'>('list');
   const [selectedBrand, setSelectedBrand] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedMainCategory, setSelectedMainCategory] = useState('all');
   const [selectedSize, setSelectedSize] = useState('all');
   const [sortOrder, setSortOrder] = useState<'none' | 'asc' | 'desc'>('none');
 
@@ -48,7 +56,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
   function matchesSearch(product: Product) {
     return (
       !normalizedQuery ||
-      [product.name, product.brand, product.category, product.description, product.sku]
+      [product.name, product.brand, product.mainCategory, product.category, product.description, product.sku]
         .filter((value): value is string => Boolean(value))
         .join(' ')
         .toLowerCase()
@@ -71,6 +79,28 @@ export default function CatalogClient({ products }: { products: Product[] }) {
     });
   }
 
+  const mainCategories = useMemo(() => {
+    return Array.from(
+      new Set(
+        products
+          .filter((product) => {
+            const matchesBrand =
+              selectedBrand === 'all' || product.brand === selectedBrand;
+
+            const matchesCategory =
+              selectedCategory === 'all' || product.category === selectedCategory;
+
+            const matchesSize =
+              selectedSize === 'all' || product.description === selectedSize;
+
+            return matchesSearch(product) && matchesBrand && matchesCategory && matchesSize;
+          })
+          .map((p) => p.mainCategory)
+          .filter((value): value is string => Boolean(value))
+      )
+    ).sort();
+  }, [products, normalizedQuery, selectedBrand, selectedCategory, selectedSize]);
+
   const brands = useMemo(() => {
     return Array.from(
       new Set(
@@ -79,16 +109,19 @@ export default function CatalogClient({ products }: { products: Product[] }) {
             const matchesCategory =
               selectedCategory === 'all' || product.category === selectedCategory;
 
+            const matchesMainCategory =
+              selectedMainCategory === 'all' || product.mainCategory === selectedMainCategory;
+
             const matchesSize =
               selectedSize === 'all' || product.description === selectedSize;
 
-            return matchesSearch(product) && matchesCategory && matchesSize;
+            return matchesSearch(product) && matchesCategory && matchesMainCategory && matchesSize;
           })
           .map((p) => p.brand)
           .filter((value): value is string => Boolean(value))
       )
     ).sort();
-  }, [products, normalizedQuery, selectedCategory, selectedSize]);
+  }, [products, normalizedQuery, selectedCategory, selectedMainCategory, selectedSize]);
 
   const categories = useMemo(() => {
     const availableCategories = Array.from(
@@ -98,10 +131,13 @@ export default function CatalogClient({ products }: { products: Product[] }) {
             const matchesBrand =
               selectedBrand === 'all' || product.brand === selectedBrand;
 
+            const matchesMainCategory =
+              selectedMainCategory === 'all' || product.mainCategory === selectedMainCategory;
+
             const matchesSize =
               selectedSize === 'all' || product.description === selectedSize;
 
-            return matchesSearch(product) && matchesBrand && matchesSize;
+            return matchesSearch(product) && matchesBrand && matchesMainCategory && matchesSize;
           })
           .map((p) => p.category)
           .filter((value): value is string => Boolean(value))
@@ -109,7 +145,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
     );
 
     return sortCategories(availableCategories);
-  }, [products, normalizedQuery, selectedBrand, selectedSize]);
+  }, [products, normalizedQuery, selectedBrand, selectedMainCategory, selectedSize]);
 
   const sizes = useMemo(() => {
     return Array.from(
@@ -122,19 +158,28 @@ export default function CatalogClient({ products }: { products: Product[] }) {
             const matchesCategory =
               selectedCategory === 'all' || product.category === selectedCategory;
 
-            return matchesSearch(product) && matchesBrand && matchesCategory;
+            const matchesMainCategory =
+              selectedMainCategory === 'all' || product.mainCategory === selectedMainCategory;
+
+            return matchesSearch(product) && matchesBrand && matchesCategory && matchesMainCategory;
           })
           .map((p) => p.description)
           .filter((value): value is string => Boolean(value))
       )
     ).sort();
-  }, [products, normalizedQuery, selectedBrand, selectedCategory]);
+  }, [products, normalizedQuery, selectedBrand, selectedCategory, selectedMainCategory]);
 
   useEffect(() => {
     if (selectedBrand !== 'all' && !brands.includes(selectedBrand)) {
       setSelectedBrand('all');
     }
   }, [brands, selectedBrand]);
+
+  useEffect(() => {
+    if (selectedMainCategory !== 'all' && !mainCategories.includes(selectedMainCategory)) {
+      setSelectedMainCategory('all');
+    }
+  }, [mainCategories, selectedMainCategory]);
 
   useEffect(() => {
     if (selectedCategory !== 'all' && !categories.includes(selectedCategory)) {
@@ -156,10 +201,13 @@ export default function CatalogClient({ products }: { products: Product[] }) {
       const matchesCategory =
         selectedCategory === 'all' || product.category === selectedCategory;
 
+      const matchesMainCategory =
+        selectedMainCategory === 'all' || product.mainCategory === selectedMainCategory;
+
       const matchesSize =
         selectedSize === 'all' || product.description === selectedSize;
 
-      return matchesSearch(product) && matchesBrand && matchesCategory && matchesSize;
+      return matchesSearch(product) && matchesBrand && matchesCategory && matchesMainCategory && matchesSize;
     });
 
     if (sortOrder === 'asc') {
@@ -171,14 +219,20 @@ export default function CatalogClient({ products }: { products: Product[] }) {
     }
 
     return result;
-  }, [products, query, selectedBrand, selectedCategory, selectedSize, sortOrder]);
+  }, [products, query, selectedBrand, selectedCategory, selectedMainCategory, selectedSize, sortOrder]);
 
   const visibleProducts = filteredProducts.slice(0, visibleCount);
   const hasMoreProducts = visibleCount < filteredProducts.length;
 
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const totalArs = cart.reduce((sum, item) => {
+    const itemTotalArs = getProductTotalArs(item, item.quantity);
+    return sum + (itemTotalArs || 0);
+  }, 0);
   const totalUnits = cart.reduce((sum, item) => sum + item.quantity, 0);
   const meetsMinimum = total >= MIN_ORDER;
+  const hasFreeShipping = total >= FREE_SHIPPING_AMOUNT;
+  const freeShippingProgress = Math.min((total / FREE_SHIPPING_AMOUNT) * 100, 100);
   const minimumProgress = Math.min((total / MIN_ORDER) * 100, 100);
 
   const currentDiscount =
@@ -192,6 +246,10 @@ export default function CatalogClient({ products }: { products: Product[] }) {
     : 0;
 
   const finalTotal = total - discountAmount;
+  const discountAmountArs = currentDiscount && totalArs > 0
+    ? totalArs * (currentDiscount.percent / 100)
+    : 0;
+  const finalTotalArs = totalArs - discountAmountArs;
 
   function resetVisibleProducts() {
     setVisibleCount(INITIAL_VISIBLE_PRODUCTS);
@@ -285,9 +343,12 @@ export default function CatalogClient({ products }: { products: Product[] }) {
   function buildWhatsAppText() {
     const lines = cart.map((item) => {
       const size = item.description ? ` (${item.description})` : '';
+      const itemTotalArs = getProductTotalArs(item, item.quantity);
+      const arsText = itemTotalArs ? ` / ${formatArs(itemTotalArs)}` : '';
+
       return `• ${item.quantity} x ${item.name}${size} - ${formatCurrency(
         item.price * item.quantity
-      )}`;
+      )}${arsText}`;
     });
 
     const discountLine = currentDiscount
@@ -325,7 +386,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
           <div className="mb-5 rounded-2xl bg-white p-4 shadow-sm">
             <input
               className="mb-4 w-full rounded-xl border border-neutral-300 px-4 py-3 outline-none focus:border-black"
-              placeholder="Buscar por producto, marca, género o tamaño..."
+              placeholder="Buscar por producto, marca, categoría, género o tamaño..."
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
@@ -333,7 +394,7 @@ export default function CatalogClient({ products }: { products: Product[] }) {
               }}
             />
 
-            <div className="grid gap-3 md:grid-cols-4">
+            <div className="grid gap-3 md:grid-cols-5">
               <select
                 className="rounded-xl border border-neutral-300 px-4 py-3 outline-none focus:border-black"
                 value={selectedBrand}
@@ -346,6 +407,22 @@ export default function CatalogClient({ products }: { products: Product[] }) {
                 {brands.map((brand) => (
                   <option key={brand} value={brand}>
                     {brand}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                className="rounded-xl border border-neutral-300 px-4 py-3 outline-none focus:border-black"
+                value={selectedMainCategory}
+                onChange={(e) => {
+                  setSelectedMainCategory(e.target.value);
+                  resetVisibleProducts();
+                }}
+              >
+                <option value="all">Todas las categorías</option>
+                {mainCategories.map((mainCategory) => (
+                  <option key={mainCategory} value={mainCategory}>
+                    {mainCategory}
                   </option>
                 ))}
               </select>
@@ -436,6 +513,45 @@ export default function CatalogClient({ products }: { products: Product[] }) {
             </p>
           </div>
 
+          <div
+            className={`mb-5 rounded-2xl border p-4 ${
+              hasFreeShipping
+                ? 'border-green-300 bg-green-100'
+                : 'border-blue-200 bg-blue-50'
+            }`}
+          >
+            <p
+              className={`text-center font-bold ${
+                hasFreeShipping ? 'text-green-800' : 'text-blue-800'
+              }`}
+            >
+              Envío gratis desde USD 200
+            </p>
+
+            <div
+              className={`mt-3 h-3 overflow-hidden rounded-full ${
+                hasFreeShipping ? 'bg-green-200' : 'bg-blue-100'
+              }`}
+            >
+              <div
+                className={`h-full rounded-full transition-all ${
+                  hasFreeShipping ? 'bg-green-600' : 'bg-blue-500'
+                }`}
+                style={{ width: `${freeShippingProgress}%` }}
+              />
+            </div>
+
+            <p
+              className={`mt-2 text-center text-sm font-semibold ${
+                hasFreeShipping ? 'text-green-900' : 'text-blue-900'
+              }`}
+            >
+              {hasFreeShipping
+                ? 'Ya tenés envío gratis en CABA/GBA.'
+                : `Te faltan ${formatCurrency(FREE_SHIPPING_AMOUNT - total)} para envío gratis.`}
+            </p>
+          </div>
+
           <div className="mb-5 rounded-2xl bg-white p-4 shadow-sm">
             <p className="font-black">Descuentos por volumen</p>
 
@@ -469,8 +585,8 @@ export default function CatalogClient({ products }: { products: Product[] }) {
 
             <div className="mt-4 space-y-3 text-sm text-neutral-700">
               <p><strong>Pagos:</strong> Efectivo (CABA/GBA), Transferencia (+5%), USDT sin recargo.</p>
-              <p><strong>Envíos:</strong> Gratis CABA/GBA. Interior a coordinar.</p>
-              <p><strong>Descuentos:</strong> desde USD 500 (5%) hasta USD 2000 (12%).</p>
+              <p><strong>Envíos:</strong> Gratis CABA/GBA desde USD 200. Interior a coordinar.</p>
+              <p><strong>Descuentos:</strong> desde USD 300 (3%) hasta USD 2000 (12%).</p>
               <p><strong>Entrega:</strong> hasta 3 días hábiles. Stock sujeto a disponibilidad.</p>
               <p><strong>Garantía:</strong> solo productos en mal estado o abiertos.</p>
             </div>
@@ -560,13 +676,13 @@ export default function CatalogClient({ products }: { products: Product[] }) {
 
                       <div>
                         <p className="text-xl font-black">
-                          <span>{formatCurrency(product.price)}</span>
-{formatArs(product.priceArs) && (
-  <span className="block text-sm font-semibold text-neutral-500">
-    {formatArs(product.priceArs)}
-  </span>
-)}
+                          {formatCurrency(product.price)}
                         </p>
+                        {formatArs(product.priceArs) && (
+                          <p className="text-sm font-semibold text-neutral-500">
+                            {formatArs(product.priceArs)}
+                          </p>
+                        )}
                         <p className="text-xs text-neutral-500">
                           Stock: {product.stock}
                         </p>
@@ -666,7 +782,14 @@ export default function CatalogClient({ products }: { products: Product[] }) {
                           <td className="p-3 font-bold">{product.name}</td>
                           <td className="p-3">{product.brand}</td>
                           <td className="p-3">{productMeta(product)}</td>
-                          <td className="p-3 font-black">{formatCurrency(product.price)}</td>
+                          <td className="p-3 font-black">
+                            <span>{formatCurrency(product.price)}</span>
+                            {formatArs(product.priceArs) && (
+                              <span className="block text-xs font-semibold text-neutral-500">
+                                {formatArs(product.priceArs)}
+                              </span>
+                            )}
+                          </td>
                           <td className="p-3">{product.stock}</td>
 
                           <td className="p-3">
@@ -774,7 +897,14 @@ export default function CatalogClient({ products }: { products: Product[] }) {
                           <p className="text-sm text-neutral-600">{productMeta(product)}</p>
 
                           <div className="mt-1 flex justify-between gap-3">
-                            <p className="font-black">{formatCurrency(product.price)}</p>
+                            <div>
+                              <p className="font-black">{formatCurrency(product.price)}</p>
+                              {formatArs(product.priceArs) && (
+                                <p className="text-xs font-semibold text-neutral-500">
+                                  {formatArs(product.priceArs)}
+                                </p>
+                              )}
+                            </div>
                             <p className="text-xs text-neutral-500">Stock: {product.stock}</p>
                           </div>
                         </div>
@@ -871,6 +1001,11 @@ export default function CatalogClient({ products }: { products: Product[] }) {
                     </p>
                     <p className="text-sm text-neutral-500">
                       {formatCurrency(item.price * item.quantity)}
+                      {formatArs(getProductTotalArs(item, item.quantity) || undefined) && (
+                        <span className="block">
+                          {formatArs(getProductTotalArs(item, item.quantity) || undefined)}
+                        </span>
+                      )}
                     </p>
                   </div>
 
@@ -913,6 +1048,11 @@ export default function CatalogClient({ products }: { products: Product[] }) {
           <div className="mt-4 shrink-0 space-y-2 border-t bg-white pt-4">
             <p className="text-lg font-black">
               Subtotal: {formatCurrency(total)}
+              {totalArs > 0 && (
+                <span className="block text-sm font-semibold text-neutral-500">
+                  {formatArs(totalArs)}
+                </span>
+              )}
             </p>
 
             {currentDiscount && (
@@ -922,9 +1062,17 @@ export default function CatalogClient({ products }: { products: Product[] }) {
                 </p>
                 <p className="text-sm text-green-700">
                   Ahorrás {formatCurrency(discountAmount)}
+                  {discountAmountArs > 0 && (
+                    <span className="block">{formatArs(discountAmountArs)}</span>
+                  )}
                 </p>
                 <p className="text-xl font-black">
                   Total final: {formatCurrency(finalTotal)}
+                  {finalTotalArs > 0 && (
+                    <span className="block text-sm font-semibold text-neutral-500">
+                      {formatArs(finalTotalArs)}
+                    </span>
+                  )}
                 </p>
               </>
             )}
@@ -934,6 +1082,14 @@ export default function CatalogClient({ products }: { products: Product[] }) {
                 Agregá {formatCurrency(nextDiscount.amount - total)} más y activás {nextDiscount.percent}% OFF.
               </p>
             )}
+
+            <p className={`text-sm font-bold ${hasFreeShipping ? 'text-green-700' : 'text-neutral-600'}`}>
+              {hasFreeShipping
+                ? 'Envío gratis activado'
+                : total > 0
+                  ? `Te faltan ${formatCurrency(FREE_SHIPPING_AMOUNT - total)} para envío gratis.`
+                  : 'Envío gratis desde USD 200.'}
+            </p>
 
             <a
               className={`mt-3 block rounded-xl py-3 text-center font-black text-white ${
@@ -964,6 +1120,11 @@ export default function CatalogClient({ products }: { products: Product[] }) {
             <p className="text-xs text-neutral-500">Pedido</p>
             <p className="font-black">
               {formatCurrency(currentDiscount ? finalTotal : total)}
+              {(currentDiscount ? finalTotalArs : totalArs) > 0 && (
+                <span className="block text-xs font-semibold text-neutral-500">
+                  {formatArs(currentDiscount ? finalTotalArs : totalArs)}
+                </span>
+              )}
             </p>
           </div>
 
