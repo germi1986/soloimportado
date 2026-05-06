@@ -15,6 +15,16 @@ const DISCOUNT_TIERS = [
 
 function formatCurrency(value: number) {
   return `USD ${value.toFixed(2)}`;
+  
+function formatArs(value?: number) {
+  if (!value || Number.isNaN(value)) return null;
+
+  return new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: 'ARS',
+    maximumFractionDigits: 0
+  }).format(value);
+
 }
 
 function productMeta(product: Product) {
@@ -550,7 +560,12 @@ export default function CatalogClient({ products }: { products: Product[] }) {
 
                       <div>
                         <p className="text-xl font-black">
-                          {formatCurrency(product.price)}
+                          <span>{formatCurrency(product.price)}</span>
+{formatArs(product.priceArs) && (
+  <span className="block text-sm font-semibold text-neutral-500">
+    {formatArs(product.priceArs)}
+  </span>
+)}
                         </p>
                         <p className="text-xs text-neutral-500">
                           Stock: {product.stock}
